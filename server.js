@@ -95,6 +95,9 @@ db.exec(`
   );
 `);
 
+// Add completed_lessons column if it doesn't exist yet (migration)
+try { db.exec("ALTER TABLE users ADD COLUMN completed_lessons TEXT DEFAULT '{}'"); } catch {}
+
 // ─── SEED CURRICULUM ─────────────────────────────────────────────────
 // Seeds from getCurriculum()-format JSON (arrays already parsed, quiz.questions may be string or array)
 function seedFromJson(courses) {
@@ -431,9 +434,20 @@ app.post('/api/webhook/grow', (req, res) => {
 });
 
 app.post('/api/progress', (req, res) => {
-  const { telegram_id, progress } = req.body;
+  const { telegram_id, progress, completedLessons } = req.body;
   if (!telegram_id || progress === undefined) return res.status(400).json({ error: 'bad_request' });
-  db.prepare('UPDATE users SET progress=? WHERE telegram_id=?').run(Math.min(100,Math.max(0,Number(progress))), telegram_id);
+  const pct = Math.min(100, Math.max(0, Number(progress)));
+  if (completedLessons) {
+    // Merge with existing completed_lessons (union — never remove a completed lesson)
+    const existing = db.prepare('SELECT completed_lessons FROM users WHERE telegram_id=?').get(telegram_id);
+    let merged = {};
+    try { merged = JSON.parse(existing?.completed_lessons || '{}'); } catch {}
+    Object.assign(merged, completedLessons);
+    db.prepare('UPDATE users SET progress=?, completed_lessons=? WHERE telegram_id=?')
+      .run(pct, JSON.stringify(merged), telegram_id);
+  } else {
+    db.prepare('UPDATE users SET progress=? WHERE telegram_id=?').run(pct, telegram_id);
+  }
   res.json({ ok: true });
 });
 

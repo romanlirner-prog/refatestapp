@@ -997,8 +997,8 @@ let currentQuizChapterId = null;
 let quizAnswers     = {};
 let quizSubmitted   = false;
 
-const completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '{}');
-const completedQuizzes = JSON.parse(localStorage.getItem('completedQuizzes')  || '{}');
+let completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '{}');
+let completedQuizzes = JSON.parse(localStorage.getItem('completedQuizzes')  || '{}');
 
 // ══════════════════════════════════════
 //  NAV
@@ -1116,6 +1116,17 @@ function handleAuthSubmit() {
 // ══════════════════════════════════════
 function loadApp() {
   document.getElementById('screen-auth').classList.remove('active');
+  // ── Merge server completed_lessons into local (union across devices) ──
+  if (currentUser?.completed_lessons) {
+    try {
+      const serverDone = typeof currentUser.completed_lessons === 'string'
+        ? JSON.parse(currentUser.completed_lessons)
+        : currentUser.completed_lessons;
+      const hadNew = Object.keys(serverDone).some(k => !completedLessons[k]);
+      Object.assign(completedLessons, serverDone);
+      if (hadNew) localStorage.setItem('completedLessons', JSON.stringify(completedLessons));
+    } catch {}
+  }
   renderHome();
   navTo('home');
 }
@@ -2021,7 +2032,11 @@ function syncProgress() {
   let total = 0, done = 0;
   curriculum.forEach(c => c.chapters.forEach(ch => ch.lessons.forEach(l => { total++; if(completedLessons[l.id]) done++; })));
   const pct = total ? Math.round(done/total*100) : 0;
-  fetch(`${API}/api/progress`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({telegram_id:currentUser.telegram_id,progress:pct}) }).catch(()=>{});
+  fetch(`${API}/api/progress`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ telegram_id: currentUser.telegram_id, progress: pct, completedLessons })
+  }).catch(() => {});
 }
 
 function openTg(key) {
