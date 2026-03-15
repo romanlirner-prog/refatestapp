@@ -46,7 +46,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 
 body {
   font-family: 'Rubik', sans-serif;
-  font-size: 16px;
+  font-size: 18px;
   background: var(--bg);
   color: var(--text-1);
   min-height: 100vh;
@@ -69,7 +69,7 @@ body {
   width: 100%; padding: 15px;
   background: var(--accent); color: #fff;
   border: none; border-radius: var(--r); cursor: pointer;
-  font-family: 'Rubik', sans-serif; font-size: 16px; font-weight: 700;
+  font-family: 'Rubik', sans-serif; font-size: 18px; font-weight: 700;
   transition: opacity .2s, transform .1s;
   display: flex; align-items: center; justify-content: center; gap: 6px;
 }
@@ -78,7 +78,7 @@ body {
 .btn-green   { background: var(--green); }
 .btn-red     { background: var(--red); }
 .btn-outline { background: none; color: var(--accent); border: 2px solid var(--accent-mid); }
-.btn-sm      { width: auto; padding: 9px 18px; font-size: 14px; border-radius: var(--r-sm); }
+.btn-sm      { width: auto; padding: 9px 18px; font-size: 16px; border-radius: var(--r-sm); }
 
 .spinner {
   width: 22px; height: 22px;
@@ -100,13 +100,13 @@ body {
   background: var(--bg); border: none; cursor: pointer;
   border-radius: var(--r-sm);
   display: flex; align-items: center; justify-content: center;
-  font-size: 18px; color: var(--text-1);
+  font-size: 21px; color: var(--text-1);
 }
-.nav-title { font-size: 16px; font-weight: 700; flex: 1; }
+.nav-title { font-size: 18px; font-weight: 700; flex: 1; }
 
 .section { padding: 20px 16px 0; }
 .section-title {
-  font-size: 14px; font-weight: 700;
+  font-size: 16px; font-weight: 700;
   letter-spacing: .07em; text-transform: uppercase;
   color: var(--text-3); margin-bottom: 12px;
 }
@@ -124,21 +124,21 @@ body {
 .auth-logo {
   width: 80px; height: 80px; border: 3px solid var(--accent); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 36px; font-weight: 900; color: var(--accent); margin-bottom: 20px;
+  font-size: 41px; font-weight: 900; color: var(--accent); margin-bottom: 20px;
 }
-.auth-title { font-size: 24px; font-weight: 800; margin-bottom: 6px; text-align: center; }
-.auth-sub   { font-size: 14px; color: var(--text-3); text-align: center; margin-bottom: 32px; line-height: 1.7; }
+.auth-title { font-size: 28px; font-weight: 800; margin-bottom: 6px; text-align: center; }
+.auth-sub   { font-size: 16px; color: var(--text-3); text-align: center; margin-bottom: 32px; line-height: 1.7; }
 .auth-input {
   width: 100%; padding: 15px 16px;
   border: 2px solid var(--border); border-radius: var(--r);
-  font-family: 'Rubik', sans-serif; font-size: 16px;
+  font-family: 'Rubik', sans-serif; font-size: 18px;
   background: var(--bg); color: var(--text-1);
   direction: ltr; text-align: center;
   transition: border-color .2s; margin-bottom: 12px;
   -webkit-user-select: text; user-select: text;
 }
 .auth-input:focus { outline: none; border-color: var(--accent); }
-.auth-error { font-size: 13px; color: var(--red); text-align: center; margin-bottom: 10px; display: none; }
+.auth-error { font-size: 15px; color: var(--red); text-align: center; margin-bottom: 10px; display: none; }
 #admin-pass-wrap.visible { max-height: 80px !important; opacity: 1 !important; pointer-events: auto !important; }
 
 /* ══════════════════════════════════════════
@@ -157,13 +157,13 @@ body {
   width: 120px; height: 120px; background: rgba(255,255,255,.05); border-radius: 50%;
 }
 .hero-inner      { position: relative; z-index: 1; text-align: right; overflow: hidden; }
-.hero-greeting   { font-size: 16px; opacity: .75; margin-bottom: 3px; }
-.hero-name       { font-size: 28px; font-weight: 800; margin-bottom: 12px; line-height: 1.1; word-break: break-word; }
+.hero-greeting   { font-size: 18px; opacity: .75; margin-bottom: 3px; }
+.hero-name       { font-size: 32px; font-weight: 800; margin-bottom: 12px; line-height: 1.1; word-break: break-word; }
 .plan-badge      { display: inline-flex; }
 .plan-badge {
   display: inline-flex; align-items: center; gap: 6px;
   background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3);
-  border-radius: var(--r-full); padding: 5px 14px; font-size: 14px; font-weight: 600;
+  border-radius: var(--r-full); padding: 5px 14px; font-size: 16px; font-weight: 600;
 }
 /* Course cards */
 .courses { display: flex; flex-direction: column; gap: 10px; }
@@ -178,7 +178,7 @@ body {
 .course-card.locked:active { transform: none; }
 .course-thumb {
   width: 90px; min-width: 90px; display: flex; align-items: center;
-  justify-content: center; font-size: 32px; flex-shrink: 0;
+  justify-content: center; font-size: 37px; flex-shrink: 0;
 }
 .ct-blue   { background: linear-gradient(135deg,#DBEAFE,#BFDBFE); }
 .ct-green  { background: linear-gradient(135deg,#DCFCE7,#BBF7D0); }
@@ -186,13 +186,13 @@ body {
 .ct-purple { background: linear-gradient(135deg,#F5F3FF,#DDD6FE); }
 .course-body { flex:1; padding: 14px 14px 14px 10px; display: flex; align-items: center; gap: 8px; }
 .course-info { flex: 1; min-width: 0; }
-.course-name { font-size: 16px; font-weight: 700; margin-bottom: 3px; }
-.course-meta { font-size: 15px; color: var(--text-3); }
+.course-name { font-size: 18px; font-weight: 700; margin-bottom: 3px; }
+.course-meta { font-size: 17px; color: var(--text-3); }
 .course-prog { margin-top: 6px; }
 .prog-bar-bg   { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
 .prog-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .4s; }
-.prog-label    { font-size: 14px; color: var(--text-3); margin-top: 3px; }
-.course-badge  { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: var(--r-full); flex-shrink: 0; }
+.prog-label    { font-size: 16px; color: var(--text-3); margin-top: 3px; }
+.course-badge  { font-size: 13px; font-weight: 700; padding: 3px 9px; border-radius: var(--r-full); flex-shrink: 0; }
 .badge-open   { background: var(--green-light); color: var(--green); }
 .badge-locked { background: var(--red-light);   color: var(--red); }
 
@@ -207,8 +207,8 @@ body {
   min-width: 0;
 }
 .qa-tile:active { transform: scale(.93); box-shadow: none; }
-.qa-tile-icon  { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-.qa-tile-label { font-size: 12px; font-weight: 700; color: var(--text-1); text-align: center; line-height: 1.2; }
+.qa-tile-icon  { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 23px; }
+.qa-tile-label { font-size: 14px; font-weight: 700; color: var(--text-1); text-align: center; line-height: 1.2; }
 
 /* Upgrade / Support */
 .upgrade-banner {
@@ -219,34 +219,34 @@ body {
   box-shadow: 0 4px 20px rgba(37,99,235,.3);
 }
 .upgrade-banner:active { opacity: .9; }
-.upgrade-emoji { font-size: 30px; flex-shrink: 0; }
-.upgrade-text  { font-size: 14px; font-weight: 500; line-height: 1.6; }
-.upgrade-text strong { font-size: 17px; font-weight: 800; display: block; margin-bottom: 2px; }
+.upgrade-emoji { font-size: 35px; flex-shrink: 0; }
+.upgrade-text  { font-size: 16px; font-weight: 500; line-height: 1.6; }
+.upgrade-text strong { font-size: 20px; font-weight: 800; display: block; margin-bottom: 2px; }
 .support-card {
   background: var(--white); border: 1px solid var(--border); border-radius: var(--r);
   padding: 16px; display: flex; align-items: center; gap: 12px;
   box-shadow: var(--sh); cursor: pointer; transition: transform .15s;
 }
 .support-card:active { transform: scale(.98); }
-.support-icon { width: 46px; height: 46px; min-width: 46px; background: var(--accent-light); border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+.support-icon { width: 46px; height: 46px; min-width: 46px; background: var(--accent-light); border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 25px; }
 
 /* ══════════════════════════════════════════
    LESSONS SCREEN
 ══════════════════════════════════════════ */
 .course-hero { padding: 24px 16px 20px; background: var(--white); border-bottom: 1px solid var(--border); }
-.course-hero-thumb { width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 30px; margin-bottom: 12px; }
-.course-hero-name { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
-.course-hero-meta { font-size: 15px; color: var(--text-3); margin-bottom: 14px; }
+.course-hero-thumb { width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 35px; margin-bottom: 12px; }
+.course-hero-name { font-size: 23px; font-weight: 800; margin-bottom: 4px; }
+.course-hero-meta { font-size: 17px; color: var(--text-3); margin-bottom: 14px; }
 .course-bar-bg   { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
 .course-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; }
 
 .chapters-list { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
 .chapter-block { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; box-shadow: var(--sh); }
 .chapter-header { padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
-.chapter-num { width: 32px; height: 32px; min-width: 32px; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
-.chapter-title { flex: 1; font-size: 16px; font-weight: 700; }
-.chapter-count { font-size: 15px; color: var(--text-3); }
-.chapter-chevron { font-size: 14px; color: var(--text-3); transition: transform .2s; }
+.chapter-num { width: 32px; height: 32px; min-width: 32px; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; }
+.chapter-title { flex: 1; font-size: 18px; font-weight: 700; }
+.chapter-count { font-size: 17px; color: var(--text-3); }
+.chapter-chevron { font-size: 16px; color: var(--text-3); transition: transform .2s; }
 .chapter-block.open .chapter-chevron { transform: rotate(180deg); }
 .lessons-list { display: none; border-top: 1px solid var(--border); }
 .chapter-block.open .lessons-list { display: block; }
@@ -255,14 +255,14 @@ body {
 .lesson-row:last-child { border-bottom: none; }
 .lesson-row:active { background: var(--bg); }
 .lesson-row.completed .lesson-title { color: var(--text-3); }
-.lesson-status { width: 28px; height: 28px; min-width: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.lesson-status { width: 28px; height: 28px; min-width: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
 .ls-done    { background: var(--green-light); color: var(--green); }
 .ls-current { background: var(--accent); color: #fff; }
-.ls-todo    { background: var(--bg); border: 2px solid var(--border); color: var(--text-3); font-size: 11px; font-weight: 700; }
+.ls-todo    { background: var(--bg); border: 2px solid var(--border); color: var(--text-3); font-size: 13px; font-weight: 700; }
 .lesson-body { flex: 1; min-width: 0; }
-.lesson-title { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+.lesson-title { font-size: 17px; font-weight: 600; margin-bottom: 2px; }
 .lesson-tags  { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
-.lesson-tag   { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: var(--r-full); background: var(--bg); color: var(--text-3); border: 1px solid var(--border); }
+.lesson-tag   { font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: var(--r-full); background: var(--bg); color: var(--text-3); border: 1px solid var(--border); }
 
 /* Quiz row at bottom of chapter */
 .quiz-row {
@@ -272,9 +272,9 @@ body {
 }
 .quiz-row:active { background: var(--accent-mid); }
 .quiz-row.locked { opacity: .45; cursor: default; pointer-events: none; }
-.quiz-row-icon { width: 28px; height: 28px; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
-.quiz-row-text { font-size: 14px; font-weight: 700; color: var(--accent); }
-.quiz-row-sub  { font-size: 11px; color: var(--text-3); }
+.quiz-row-icon { width: 28px; height: 28px; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.quiz-row-text { font-size: 16px; font-weight: 700; color: var(--accent); }
+.quiz-row-sub  { font-size: 13px; color: var(--text-3); }
 
 /* ══════════════════════════════════════════
    LESSON DETAIL — STEP FLOW
@@ -285,7 +285,7 @@ body {
 }
 .step-tab {
   flex: 1; min-width: 80px; padding: 13px 8px; text-align: center;
-  font-size: 13px; font-weight: 700; color: var(--text-3);
+  font-size: 15px; font-weight: 700; color: var(--text-3);
   border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap;
   transition: color .2s;
 }
@@ -310,26 +310,26 @@ body {
   background: var(--bg); border-radius: var(--r); aspect-ratio: 16/9;
   border: 2px dashed var(--border); margin-bottom: 16px;
 }
-.video-placeholder-icon { font-size: 36px; opacity: .4; }
-.video-placeholder-text { font-size: 14px; }
+.video-placeholder-icon { font-size: 41px; opacity: .4; }
+.video-placeholder-text { font-size: 16px; }
 
 .content-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 12px; box-shadow: var(--sh); }
-.content-card-title { font-size: 14px; font-weight: 700; color: var(--text-3); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 12px; }
-.content-card p { font-size: 16px; line-height: 1.75; color: var(--text-2); }
+.content-card-title { font-size: 16px; font-weight: 700; color: var(--text-3); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 12px; }
+.content-card p { font-size: 18px; line-height: 1.75; color: var(--text-2); }
 
 .exercise-item { padding: 11px 0; border-bottom: 1px solid var(--border); }
 .exercise-item:last-child { border-bottom: none; }
-.exercise-q { font-size: 15px; font-weight: 600; line-height: 1.6; direction: rtl; }
+.exercise-q { font-size: 17px; font-weight: 600; line-height: 1.6; direction: rtl; }
 
 .hw-item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
 .hw-item:last-child { border-bottom: none; }
-.hw-num { width: 22px; height: 22px; min-width: 22px; background: var(--accent-light); color: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; margin-top: 2px; }
-.hw-text { font-size: 15px; line-height: 1.7; }
+.hw-num { width: 22px; height: 22px; min-width: 22px; background: var(--accent-light); color: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; margin-top: 2px; }
+.hw-text { font-size: 17px; line-height: 1.7; }
 
 .step-nav-btn {
   width: 100%; padding: 14px; background: var(--accent); color: #fff;
   border: none; border-radius: var(--r); font-family: 'Rubik', sans-serif;
-  font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 16px;
+  font-size: 17px; font-weight: 700; cursor: pointer; margin-top: 16px;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   transition: opacity .2s;
 }
@@ -339,7 +339,7 @@ body {
 
 .video-progress-note {
   background: var(--amber-light); border: 1px solid #FDE68A; border-radius: var(--r-sm);
-  padding: 10px 14px; font-size: 13px; color: var(--amber); margin-bottom: 12px;
+  padding: 10px 14px; font-size: 15px; color: var(--amber); margin-bottom: 12px;
   display: flex; align-items: center; gap: 8px;
 }
 
@@ -348,19 +348,19 @@ body {
 ══════════════════════════════════════════ */
 .quiz-wrap { padding: 20px 16px; }
 .quiz-header { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 16px; box-shadow: var(--sh); }
-.quiz-title { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
-.quiz-sub   { font-size: 15px; color: var(--text-3); }
+.quiz-title { font-size: 21px; font-weight: 800; margin-bottom: 4px; }
+.quiz-sub   { font-size: 17px; color: var(--text-3); }
 .quiz-progress { margin-top: 10px; }
 .quiz-prog-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
 .quiz-prog-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }
-.quiz-prog-label { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+.quiz-prog-label { font-size: 13px; color: var(--text-3); margin-top: 4px; }
 
 .quiz-question-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; margin-bottom: 12px; box-shadow: var(--sh); }
-.quiz-q-text { font-size: 16px; font-weight: 700; line-height: 1.5; margin-bottom: 16px; }
+.quiz-q-text { font-size: 18px; font-weight: 700; line-height: 1.5; margin-bottom: 16px; }
 .quiz-options { display: flex; flex-direction: column; gap: 8px; }
 .quiz-option {
   padding: 13px 16px; border: 2px solid var(--border); border-radius: var(--r-sm);
-  font-size: 15px; font-weight: 500; cursor: pointer; transition: all .15s;
+  font-size: 17px; font-weight: 500; cursor: pointer; transition: all .15s;
   background: var(--bg); direction: rtl;
 }
 .quiz-option:active { transform: scale(.98); }
@@ -377,50 +377,50 @@ body {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   border: 5px solid var(--accent);
 }
-.quiz-score-num  { font-size: 28px; font-weight: 900; color: var(--accent); line-height: 1; }
-.quiz-score-denom { font-size: 14px; color: var(--text-3); }
-.quiz-result-title { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
-.quiz-result-sub   { font-size: 14px; color: var(--text-3); }
+.quiz-score-num  { font-size: 32px; font-weight: 900; color: var(--accent); line-height: 1; }
+.quiz-score-denom { font-size: 16px; color: var(--text-3); }
+.quiz-result-title { font-size: 23px; font-weight: 800; margin-bottom: 6px; }
+.quiz-result-sub   { font-size: 16px; color: var(--text-3); }
 
 /* ══════════════════════════════════════════
    PROGRESS MAP
 ══════════════════════════════════════════ */
 .progress-map { padding: 20px 16px 40px; }
 .map-course-section { margin-bottom: 28px; }
-.map-course-title { font-size: 16px; font-weight: 800; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.map-course-title { font-size: 18px; font-weight: 800; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
 .map-track { position: relative; padding-right: 40px; }
 .map-track::before { content: ''; position: absolute; right: 15px; top: 16px; bottom: 16px; width: 2px; background: var(--border); border-radius: 1px; }
 .map-node { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; position: relative; }
-.map-dot { width: 30px; height: 30px; min-width: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; position: absolute; right: 0; z-index: 1; }
+.map-dot { width: 30px; height: 30px; min-width: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; position: absolute; right: 0; z-index: 1; }
 .md-done    { background: var(--green); color: #fff; }
 .md-current { background: var(--accent); color: #fff; box-shadow: 0 0 0 4px var(--accent-mid); }
 .md-todo    { background: var(--white); border: 2px solid var(--border); color: var(--text-3); }
-.md-quiz    { background: var(--amber-light); border: 2px solid var(--amber); color: var(--amber); font-size: 12px; }
+.md-quiz    { background: var(--amber-light); border: 2px solid var(--amber); color: var(--amber); font-size: 14px; }
 .map-card { margin-right: 46px; flex: 1; background: var(--white); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; box-shadow: var(--sh); cursor: pointer; transition: transform .12s; }
 .map-card:active { transform: scale(.97); }
 .map-card.current { border-color: var(--accent); background: var(--accent-light); }
 .map-card.done    { opacity: .7; }
-.map-card-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
-.map-card-meta  { font-size: 12px; color: var(--text-3); }
+.map-card-title { font-size: 16px; font-weight: 700; margin-bottom: 3px; }
+.map-card-meta  { font-size: 14px; color: var(--text-3); }
 
 /* ══════════════════════════════════════════
    ADMIN — LOGIN
 ══════════════════════════════════════════ */
 #screen-admin { min-height: 100vh; display: none; flex-direction: column; align-items: center; justify-content: flex-start; padding: 32px 20px; background: var(--bg); }
 #screen-admin.active { display: flex; }
-.admin-badge { background: var(--red); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: var(--r-full); letter-spacing: .05em; margin-bottom: 20px; }
+.admin-badge { background: var(--red); color: #fff; font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: var(--r-full); letter-spacing: .05em; margin-bottom: 20px; }
 
 .admin-panel { width: 100%; max-width: 540px; }
 .admin-card-head { background: linear-gradient(135deg,#1E40AF,#2563EB); border-radius: var(--r) var(--r) 0 0; padding: 20px; color: #fff; }
-.admin-card-head h2 { font-size: 18px; font-weight: 800; }
-.admin-card-head p  { font-size: 13px; opacity: .8; margin-top: 4px; }
+.admin-card-head h2 { font-size: 21px; font-weight: 800; }
+.admin-card-head p  { font-size: 15px; opacity: .8; margin-top: 4px; }
 .admin-card-body { background: var(--white); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--r) var(--r); padding: 20px; }
 
 .form-group { margin-bottom: 14px; }
-.form-label { font-size: 12px; font-weight: 700; color: var(--text-3); margin-bottom: 6px; display: block; }
+.form-label { font-size: 14px; font-weight: 700; color: var(--text-3); margin-bottom: 6px; display: block; }
 .form-input {
   width: 100%; padding: 11px 14px; border: 2px solid var(--border); border-radius: var(--r-sm);
-  font-family: 'Rubik', sans-serif; font-size: 15px; background: var(--bg); color: var(--text-1);
+  font-family: 'Rubik', sans-serif; font-size: 17px; background: var(--bg); color: var(--text-1);
   transition: border-color .2s; -webkit-user-select: text; user-select: text;
 }
 .form-input:focus { outline: none; border-color: var(--accent); }
@@ -429,13 +429,13 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
 /* Admin stats */
 .admin-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
 .admin-stat  { background: var(--bg); border-radius: var(--r-sm); padding: 14px; text-align: center; }
-.admin-stat-num   { font-size: 28px; font-weight: 900; color: var(--accent); }
-.admin-stat-label { font-size: 11px; color: var(--text-3); margin-top: 2px; }
-.admin-section-title { font-size: 12px; font-weight: 700; color: var(--text-3); letter-spacing: .06em; text-transform: uppercase; margin: 20px 0 10px; }
+.admin-stat-num   { font-size: 32px; font-weight: 900; color: var(--accent); }
+.admin-stat-label { font-size: 13px; color: var(--text-3); margin-top: 2px; }
+.admin-section-title { font-size: 14px; font-weight: 700; color: var(--text-3); letter-spacing: .06em; text-transform: uppercase; margin: 20px 0 10px; }
 
 /* Admin tabs */
 .admin-tabs { display: flex; background: var(--bg); border-radius: var(--r-sm); padding: 3px; margin-bottom: 16px; gap: 2px; }
-.admin-tab { flex: 1; padding: 8px; text-align: center; font-size: 13px; font-weight: 700; color: var(--text-3); border-radius: 8px; cursor: pointer; transition: all .2s; }
+.admin-tab { flex: 1; padding: 8px; text-align: center; font-size: 15px; font-weight: 700; color: var(--text-3); border-radius: 8px; cursor: pointer; transition: all .2s; }
 .admin-tab.active { background: var(--white); color: var(--accent); box-shadow: var(--sh); }
 
 /* Course tree */
@@ -449,12 +449,12 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
   cursor: pointer; background: var(--white);
 }
 .tree-course-head:hover { background: var(--bg); }
-.tree-emoji { font-size: 20px; }
-.tree-course-name { flex: 1; font-size: 15px; font-weight: 700; }
+.tree-emoji { font-size: 23px; }
+.tree-course-name { flex: 1; font-size: 17px; font-weight: 700; }
 .tree-actions { display: flex; gap: 4px; }
 .tree-btn {
   width: 28px; height: 28px; border: none; border-radius: 7px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
   background: var(--bg); color: var(--text-2); transition: background .15s;
 }
 .tree-btn:hover  { background: var(--border); }
@@ -466,8 +466,8 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
 .tree-chapter:last-child { border-bottom: none; }
 .tree-chapter-head { padding: 10px 16px 10px 10px; display: flex; align-items: center; gap: 8px; background: var(--bg); cursor: pointer; }
 .tree-chapter-head:hover { background: #E8EDF3; }
-.tree-chapter-num  { width: 22px; height: 22px; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
-.tree-chapter-name { flex: 1; font-size: 14px; font-weight: 600; }
+.tree-chapter-num  { width: 22px; height: 22px; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.tree-chapter-name { flex: 1; font-size: 16px; font-weight: 600; }
 
 .tree-lessons { background: var(--white); }
 .tree-lesson  {
@@ -476,14 +476,14 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
 }
 .tree-lesson:last-child { border-bottom: none; }
 .tree-lesson:hover { background: var(--bg); }
-.tree-lesson-num  { width: 20px; height: 20px; background: var(--accent-light); color: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
-.tree-lesson-name { flex: 1; font-size: 14px; }
-.tree-has-video   { width: 16px; height: 16px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; }
+.tree-lesson-num  { width: 20px; height: 20px; background: var(--accent-light); color: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.tree-lesson-name { flex: 1; font-size: 16px; }
+.tree-has-video   { width: 16px; height: 16px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; }
 
 .tree-quiz-row { padding: 9px 16px 9px 14px; display: flex; align-items: center; gap: 8px; background: var(--amber-light); border-top: 1px dashed var(--amber); cursor: pointer; }
 .tree-quiz-row:hover { background: #FDE68A; }
-.tree-quiz-badge { font-size: 12px; }
-.tree-quiz-name  { flex: 1; font-size: 13px; font-weight: 600; color: var(--amber); }
+.tree-quiz-badge { font-size: 14px; }
+.tree-quiz-name  { flex: 1; font-size: 15px; font-weight: 600; color: var(--amber); }
 
 /* Edit panel (right side) */
 .edit-overlay {
@@ -501,39 +501,39 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
   display: flex; align-items: center; gap: 12px;
   position: sticky; top: 0; z-index: 1;
 }
-.edit-sheet-title { flex: 1; font-size: 16px; font-weight: 700; }
+.edit-sheet-title { flex: 1; font-size: 18px; font-weight: 700; }
 .edit-sheet-close {
   width: 32px; height: 32px; background: rgba(255,255,255,.2); border: none;
   border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  font-size: 18px; color: #fff;
+  font-size: 21px; color: #fff;
 }
 .edit-sheet-body { padding: 20px; }
 .edit-list-item {
   padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-sm);
   margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
-  font-size: 14px;
+  font-size: 16px;
 }
-.edit-list-input { flex: 1; background: none; border: none; font-family: 'Rubik', sans-serif; font-size: 14px; color: var(--text-1); -webkit-user-select: text; user-select: text; }
+.edit-list-input { flex: 1; background: none; border: none; font-family: 'Rubik', sans-serif; font-size: 16px; color: var(--text-1); -webkit-user-select: text; user-select: text; }
 .edit-list-input:focus { outline: none; }
-.edit-list-del { width: 24px; height: 24px; background: var(--red-light); color: var(--red); border: none; border-radius: 6px; cursor: pointer; font-size: 14px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-.edit-add-btn { width: 100%; padding: 9px; background: var(--bg); border: 2px dashed var(--border); border-radius: var(--r-sm); font-family: 'Rubik', sans-serif; font-size: 13px; font-weight: 600; color: var(--text-3); cursor: pointer; margin-top: 4px; }
+.edit-list-del { width: 24px; height: 24px; background: var(--red-light); color: var(--red); border: none; border-radius: 6px; cursor: pointer; font-size: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.edit-add-btn { width: 100%; padding: 9px; background: var(--bg); border: 2px dashed var(--border); border-radius: var(--r-sm); font-family: 'Rubik', sans-serif; font-size: 15px; font-weight: 600; color: var(--text-3); cursor: pointer; margin-top: 4px; }
 .edit-add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 
 /* Quiz editor */
 .quiz-q-editor { background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px; margin-bottom: 8px; }
 .quiz-q-editor-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
-.quiz-q-num { font-size: 12px; font-weight: 700; color: var(--text-3); }
+.quiz-q-num { font-size: 14px; font-weight: 700; color: var(--text-3); }
 .quiz-opt-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
-.quiz-opt-radio { width: 18px; height: 18px; min-width: 18px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+.quiz-opt-radio { width: 18px; height: 18px; min-width: 18px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
 .quiz-opt-radio.is-answer { border-color: var(--green); background: var(--green-light); color: var(--green); }
 
 /* Admin user list */
 .admin-user-row { background: var(--bg); border-radius: var(--r-sm); padding: 12px; display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.admin-user-avatar { width: 36px; height: 36px; min-width: 36px; background: var(--accent-light); color: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+.admin-user-avatar { width: 36px; height: 36px; min-width: 36px; background: var(--accent-light); color: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; }
 .admin-user-info { flex: 1; min-width: 0; }
-.admin-user-name { font-size: 14px; font-weight: 700; }
-.admin-user-meta { font-size: 11px; color: var(--text-3); }
-.plan-pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: var(--r-full); }
+.admin-user-name { font-size: 16px; font-weight: 700; }
+.admin-user-meta { font-size: 13px; color: var(--text-3); }
+.plan-pill { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: var(--r-full); }
 .pill-solo   { background: var(--accent-light); color: var(--accent); }
 .pill-class  { background: var(--green-light); color: var(--green); }
 .pill-mentor { background: #FFF7ED; color: #C2410C; }
@@ -557,7 +557,7 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
 }
 .mmt-lesson-name {
   flex: 1; min-width: 0;
-  font-size: 14px; font-weight: 600;
+  font-size: 16px; font-weight: 600;
   color: rgba(255,255,255,.9);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   direction: rtl; text-align: right;
@@ -566,7 +566,7 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
   flex-shrink: 0;
   background: #22C55E; color: #fff;
   border: none; border-radius: 20px;
-  padding: 8px 18px; font-size: 15px; font-weight: 800;
+  padding: 8px 18px; font-size: 17px; font-weight: 800;
   cursor: pointer; font-family: 'Rubik', sans-serif;
   box-shadow: 0 2px 10px rgba(34,197,94,.45);
   white-space: nowrap; direction: rtl;
@@ -578,7 +578,7 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
   margin-top: 8px;
   background: rgba(255,255,255,.15); color: #fff;
   border: 1px solid rgba(255,255,255,.3); border-radius: 20px;
-  padding: 5px 14px; font-size: 13px; font-weight: 700;
+  padding: 5px 14px; font-size: 15px; font-weight: 700;
   cursor: pointer; font-family: 'Rubik', sans-serif;
   backdrop-filter: blur(4px);
 }
@@ -606,25 +606,25 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
   direction: ltr; letter-spacing: -0.04em;
 }
 .grade-tile-label {
-  font-size: 19px; font-weight: 800; color: #fff;
+  font-size: 22px; font-weight: 800; color: #fff;
   position: relative; z-index: 1; line-height: 1.2;
   align-self: flex-start;
 }
 .grade-tile-sub {
-  font-size: 15px; color: rgba(255,255,255,.55);
+  font-size: 17px; color: rgba(255,255,255,.55);
   margin-top: 3px; position: relative; z-index: 1;
   align-self: flex-start;
 }
 .grade-tile-open-badge {
   margin-top: auto; align-self: flex-start; display: inline-flex; align-items: center; gap: 4px;
   background: rgba(255,255,255,.13); border-radius: 20px;
-  padding: 4px 10px; font-size: 12px; font-weight: 700;
+  padding: 4px 10px; font-size: 14px; font-weight: 700;
   color: rgba(255,255,255,.9); position: relative; z-index: 1;
 }
 .grade-tile-buy-btn {
   margin-top: auto; align-self: flex-start; display: inline-flex; align-items: center; gap: 4px;
   background: rgba(245,158,11,.92); border-radius: 20px;
-  padding: 5px 12px; font-size: 12px; font-weight: 800; color: #000;
+  padding: 5px 12px; font-size: 14px; font-weight: 800; color: #000;
   border: none; cursor: pointer; position: relative; z-index: 1;
   font-family: 'Rubik',sans-serif;
 }
@@ -634,23 +634,23 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
 }
 .grade-course-icon {
   width: 44px; height: 44px; min-width: 44px; border-radius: 12px;
-  display: flex; align-items: center; justify-content: center; font-size: 22px;
+  display: flex; align-items: center; justify-content: center; font-size: 25px;
 }
 .grade-course-info { flex: 1; min-width: 0; }
-.grade-course-name { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
-.grade-course-meta { font-size: 12px; color: var(--text-3); }
+.grade-course-name { font-size: 17px; font-weight: 700; margin-bottom: 2px; }
+.grade-course-meta { font-size: 14px; color: var(--text-3); }
 .grade-buy-cta {
   display: flex; align-items: center; justify-content: center;
   background: linear-gradient(135deg,#F59E0B,#EF4444); color: #fff;
   border: none; border-radius: var(--r-sm); padding: 8px 12px;
-  font-family: 'Rubik',sans-serif; font-size: 12px; font-weight: 800;
+  font-family: 'Rubik',sans-serif; font-size: 14px; font-weight: 800;
   cursor: pointer; white-space: nowrap; flex-shrink: 0;
 }
 .grade-open-btn {
   display: flex; align-items: center; justify-content: center;
   background: var(--accent); color: #fff; border: none;
   border-radius: var(--r-sm); padding: 8px 12px;
-  font-family: 'Rubik',sans-serif; font-size: 12px; font-weight: 800;
+  font-family: 'Rubik',sans-serif; font-size: 14px; font-weight: 800;
   cursor: pointer; white-space: nowrap; flex-shrink: 0;
 }
 
@@ -660,7 +660,7 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
   background: rgba(0,0,0,.6); border: none; color: #fff;
   width: 36px; height: 36px; border-radius: 9px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px; backdrop-filter: blur(4px); transition: background .2s;
+  font-size: 18px; backdrop-filter: blur(4px); transition: background .2s;
 }
 .video-fullscreen-btn:active { background: rgba(0,0,0,.9); }
 
@@ -668,10 +668,32 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
 .toast {
   position: fixed; bottom: 24px; right: 50%; transform: translateX(50%);
   background: #0F172A; color: #fff; padding: 10px 20px; border-radius: var(--r-full);
-  font-size: 14px; font-weight: 600; z-index: 999; opacity: 0;
+  font-size: 16px; font-weight: 600; z-index: 999; opacity: 0;
   transition: opacity .3s; pointer-events: none; white-space: nowrap;
 }
 .toast.show { opacity: 1; }
+
+/* Exercise video slots */
+.ex-video-block { margin-bottom: 22px; }
+.ex-video-block:last-child { margin-bottom: 0; }
+.ex-video-title { font-size: 17px; font-weight: 700; margin-bottom: 10px; color: var(--text-2); }
+
+/* Homework solution */
+.hw-solution-btn {
+  margin-top: 8px; display: inline-flex; align-items: center; gap: 5px;
+  background: var(--accent-light); color: var(--accent);
+  border: 1px solid var(--accent-mid); border-radius: var(--r-sm);
+  padding: 5px 14px; font-size: 15px; font-weight: 700;
+  cursor: pointer; font-family: 'Rubik', sans-serif;
+}
+.hw-solution-btn:active { opacity: .8; }
+.hw-sol-video.hidden { display: none; }
+
+/* Confetti */
+@keyframes confettiFall {
+  0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
 </style>
 </head>
 <body>
@@ -766,8 +788,8 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
   <!-- Step tabs -->
   <div class="step-tabs" id="step-tabs">
     <div class="step-tab active" id="tab-video"     onclick="gotoStep(0)">📖 תיאוריה</div>
-    <div class="step-tab locked"  id="tab-exercises" onclick="gotoStep(1)">✍️ תרגילים</div>
-    <div class="step-tab locked"  id="tab-homework"  onclick="gotoStep(2)">📚 שיעורי בית</div>
+    <div class="step-tab"        id="tab-exercises" onclick="gotoStep(1)">✍️ תרגילים</div>
+    <div class="step-tab"        id="tab-homework"  onclick="gotoStep(2)">📚 שיעורי בית</div>
   </div>
 
   <!-- Step 0: Video -->
@@ -777,7 +799,7 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="content-card-title">📖 נושא השיעור</div>
       <p id="lesson-description"></p>
     </div>
-    <button class="step-nav-btn" id="video-next-btn" onclick="unlockStep(1)">
+    <button class="step-nav-btn" id="video-next-btn" onclick="gotoStep(1)">
       מעבר לתרגילים ✍️
     </button>
   </div>
@@ -1358,42 +1380,28 @@ function openLesson(courseId, chapterId, lessonId) {
   // Video
   const vc = document.getElementById('video-container');
   if (ls.video_url) {
-    const src = ls.video_url.replace('www.dropbox.com','dl.dropboxusercontent.com').replace('?dl=0','?raw=1').replace('dl.dropboxusercontent.com','dl.dropboxusercontent.com');
+    const src = fixVideoUrl(ls.video_url);
     vc.innerHTML = `
       <div class="video-wrap">
         <video id="lesson-video" controls controlslist="nodownload" playsinline
-          oncontextmenu="return false"
-          onended="onVideoEnd()"
-          ontimeupdate="onVideoProgress(this)">
+          oncontextmenu="return false">
           <source src="${src}" type="video/mp4">
         </video>
-        <button class="video-fullscreen-btn" onclick="enterFullscreen()" title="מסך מלא">⛶</button>
-      </div>
-      <div class="video-progress-note" id="video-note">
-        ⏱️ צפה בסרטון עד הסוף כדי להמשיך לתרגילים
+        <button class="video-fullscreen-btn" onclick="toggleFullscreen(this)" title="מסך מלא">⛶</button>
       </div>`;
-    document.getElementById('video-next-btn').textContent = 'מעבר לתרגילים ✍️';
-    document.getElementById('video-next-btn').disabled = true;
   } else {
     vc.innerHTML = `<div class="video-placeholder"><div class="video-placeholder-icon">📹</div><div class="video-placeholder-text">סרטון יתווסף בקרוב</div></div>`;
-    document.getElementById('video-next-btn').disabled = false;
-    videoWatched = true;
   }
+  document.getElementById('video-next-btn').disabled = false;
 
   // Description
   document.getElementById('lesson-description').textContent = ls.description || `בשיעור זה נלמד את נושא ${ls.title}.`;
 
-  // Exercises
-  const el = document.getElementById('exercises-list');
-  el.innerHTML = ls.exercises.length
-    ? ls.exercises.map(ex => `<div class="exercise-item"><div class="exercise-q">${ex}</div></div>`).join('')
-    : '<div style="color:var(--text-3);font-size:14px">אין תרגילים לשיעור זה</div>';
+  // Exercises (video slots)
+  document.getElementById('exercises-list').innerHTML = renderExerciseVideos(ls.exercises || []);
 
-  // Homework
-  const hl = document.getElementById('homework-list');
-  hl.innerHTML = ls.homework.length
-    ? ls.homework.map((h,i) => `<div class="hw-item"><div class="hw-num">${i+1}</div><div class="hw-text">${h}</div></div>`).join('')
-    : '<div style="color:var(--text-3);font-size:14px">אין שיעורי בית לשיעור זה</div>';
+  // Homework with solution buttons
+  document.getElementById('homework-list').innerHTML = renderHomeworkList(ls.homework || []);
 
   // Done button
   const doneBtn = document.getElementById('done-btn');
@@ -1403,10 +1411,7 @@ function openLesson(courseId, chapterId, lessonId) {
     doneBtn.textContent = '✓ סמן שיעור כהושלם'; doneBtn.classList.remove('done'); doneBtn.disabled = false;
   }
 
-  // Reset tabs — always start on theory tab
-  lockStep(1); lockStep(2);
-  if (completedLessons[ls.id]) { unlockStepOnly(1); unlockStepOnly(2); }
-  gotoStep(0);  // always land on step 0
+  gotoStep(0);
 
   navTo('lesson-detail');
 }
@@ -1423,37 +1428,6 @@ function gotoStep(n) {
   window.scrollTo(0,0);
 }
 
-function lockStep(n) {
-  const tabs = ['tab-video','tab-exercises','tab-homework'];
-  document.getElementById(tabs[n]).classList.add('locked');
-}
-
-function unlockStep(n) {
-  const tabs = ['tab-video','tab-exercises','tab-homework'];
-  document.getElementById(tabs[n]).classList.remove('locked');
-  if (n === 1) document.getElementById('video-next-btn').disabled = false;
-  gotoStep(n);
-}
-function unlockStepOnly(n) {
-  // Unlock without navigating (used when opening already-completed lessons)
-  const tabs = ['tab-video','tab-exercises','tab-homework'];
-  document.getElementById(tabs[n]).classList.remove('locked');
-  if (n === 1) document.getElementById('video-next-btn').disabled = false;
-}
-
-function onVideoEnd() {
-  videoWatched = true;
-  const note = document.getElementById('video-note');
-  if (note) note.style.display = 'none';
-  unlockStep(1);
-}
-
-function onVideoProgress(video) {
-  // unlock if >80% watched
-  if (!videoWatched && video.duration > 0 && video.currentTime / video.duration > 0.8) {
-    onVideoEnd();
-  }
-}
 
 function markLessonDone() {
   if (!currentLesson) return;
@@ -1461,8 +1435,10 @@ function markLessonDone() {
   localStorage.setItem('completedLessons', JSON.stringify(completedLessons));
   const btn = document.getElementById('done-btn');
   btn.textContent = '✓ שיעור הושלם'; btn.classList.add('done'); btn.disabled = true;
-  showToast('שיעור הושלם! 🎉');
+  showConfetti();
   syncProgress();
+  renderMinimap();
+  setTimeout(() => navTo('lessons', currentLesson.courseId), 2200);
 }
 
 // ══════════════════════════════════════
@@ -1830,23 +1806,49 @@ function openEditSheet(type, id) {
       <div class="form-group"><label class="form-label">מזהה שיעור</label><input class="form-input" id="ef-id" placeholder="e.g. ls_123"></div>
       <div class="form-group"><label class="form-label">כותרת</label><input class="form-input" id="ef-title" placeholder="נושא השיעור"></div>
       <div class="form-group"><label class="form-label">תיאור</label><textarea class="form-input" id="ef-desc" placeholder="הסבר קצר על השיעור"></textarea></div>
-      <div class="form-group"><label class="form-label">קישור וידאו (Dropbox)</label><input class="form-input" id="ef-video" placeholder="https://www.dropbox.com/s/..." dir="ltr"></div>
+      <div class="form-group"><label class="form-label">🎬 וידאו תיאוריה (Dropbox)</label><input class="form-input" id="ef-video" placeholder="https://www.dropbox.com/s/..." dir="ltr"></div>
       <div class="form-group"><label class="form-label">תגיות (אחת בשורה)</label><textarea class="form-input" id="ef-tags" placeholder="תיאוריה&#10;תרגול" style="min-height:60px"></textarea></div>
-      <div class="form-group"><label class="form-label">תרגילים (אחד בשורה)</label><textarea class="form-input" id="ef-exercises" placeholder="פתור: ..." style="min-height:80px"></textarea></div>
-      <div class="form-group"><label class="form-label">שיעורי בית (אחד בשורה)</label><textarea class="form-input" id="ef-homework" placeholder="דף תרגול..." style="min-height:60px"></textarea></div>
+      <div class="admin-section-title" style="margin-top:16px">✍️ תרגילים (סרטונים)</div>
+      ${[0,1,2].map(i=>`<div style="background:var(--bg);border-radius:var(--r-sm);padding:10px;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:700;color:var(--text-3);margin-bottom:6px">תרגיל ${i+1}</div>
+        <input class="form-input" id="ef-ex-title-${i}" placeholder="כותרת התרגיל" style="margin-bottom:6px">
+        <input class="form-input" id="ef-ex-url-${i}" placeholder="קישור סרטון" dir="ltr">
+      </div>`).join('')}
+      <div class="admin-section-title" style="margin-top:16px">📚 שיעורי בית</div>
+      ${[0,1,2].map(i=>`<div style="background:var(--bg);border-radius:var(--r-sm);padding:10px;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:700;color:var(--text-3);margin-bottom:6px">שיעור בית ${i+1}</div>
+        <textarea class="form-input" id="ef-hw-text-${i}" placeholder="טקסט התרגיל" style="min-height:60px;margin-bottom:6px"></textarea>
+        <input class="form-input" id="ef-hw-sol-${i}" placeholder="קישור לסרטון פתרון" dir="ltr">
+      </div>`).join('')}
       <button class="btn" onclick="saveEdit()">שמור שיעור</button>`;
   }
   else if (type === 'edit-lesson') {
     let ls = null;
     for (const c of curriculum) { for (const ch of c.chapters) { ls = ch.lessons.find(l=>l.id===id); if(ls)break; } if(ls)break; }
     title.textContent = `✏️ ${ls?.title||id}`;
+    const exArr = ls?.exercises||[];
+    const hwArr = ls?.homework||[];
     body.innerHTML = `
       <div class="form-group"><label class="form-label">כותרת</label><input class="form-input" id="ef-title" value="${ls?.title||''}"></div>
       <div class="form-group"><label class="form-label">תיאור</label><textarea class="form-input" id="ef-desc">${ls?.description||''}</textarea></div>
-      <div class="form-group"><label class="form-label">🎬 קישור וידאו Dropbox</label><input class="form-input" id="ef-video" value="${ls?.video_url||''}" dir="ltr" placeholder="https://www.dropbox.com/s/..."></div>
+      <div class="form-group"><label class="form-label">🎬 וידאו תיאוריה (Dropbox)</label><input class="form-input" id="ef-video" value="${ls?.video_url||''}" dir="ltr" placeholder="https://www.dropbox.com/s/..."></div>
       <div class="form-group"><label class="form-label">תגיות (אחת בשורה)</label><textarea class="form-input" id="ef-tags" style="min-height:55px">${(ls?.tags||[]).join('\n')}</textarea></div>
-      <div class="form-group"><label class="form-label">תרגילים (אחד בשורה)</label><textarea class="form-input" id="ef-exercises" style="min-height:100px">${(ls?.exercises||[]).join('\n')}</textarea></div>
-      <div class="form-group"><label class="form-label">שיעורי בית (אחד בשורה)</label><textarea class="form-input" id="ef-homework" style="min-height:80px">${(ls?.homework||[]).join('\n')}</textarea></div>
+      <div class="admin-section-title" style="margin-top:16px">✍️ תרגילים (סרטונים)</div>
+      ${[0,1,2].map(i=>{
+        const ex=exArr[i]; const t=typeof ex==='object'?(ex.title||''):''; const u=typeof ex==='object'?(ex.video_url||''):'';
+        return `<div style="background:var(--bg);border-radius:var(--r-sm);padding:10px;margin-bottom:8px">
+          <div style="font-size:13px;font-weight:700;color:var(--text-3);margin-bottom:6px">תרגיל ${i+1}</div>
+          <input class="form-input" id="ef-ex-title-${i}" value="${t}" placeholder="כותרת התרגיל" style="margin-bottom:6px">
+          <input class="form-input" id="ef-ex-url-${i}" value="${u}" placeholder="קישור סרטון" dir="ltr">
+        </div>`;}).join('')}
+      <div class="admin-section-title" style="margin-top:16px">📚 שיעורי בית</div>
+      ${[0,1,2].map(i=>{
+        const hw=hwArr[i]; const t=typeof hw==='object'?(hw.text||''):(typeof hw==='string'?hw:''); const u=typeof hw==='object'?(hw.solution_url||''):'';
+        return `<div style="background:var(--bg);border-radius:var(--r-sm);padding:10px;margin-bottom:8px">
+          <div style="font-size:13px;font-weight:700;color:var(--text-3);margin-bottom:6px">שיעור בית ${i+1}</div>
+          <textarea class="form-input" id="ef-hw-text-${i}" placeholder="טקסט התרגיל" style="min-height:60px;margin-bottom:6px">${t}</textarea>
+          <input class="form-input" id="ef-hw-sol-${i}" value="${u}" placeholder="קישור לסרטון פתרון" dir="ltr">
+        </div>`;}).join('')}
       <button class="btn" onclick="saveEdit()">עדכן שיעור</button>
       <button class="btn btn-red" style="margin-top:8px" onclick="confirmDelete('lesson','${id}')">🗑 מחק שיעור</button>`;
   }
@@ -1963,8 +1965,8 @@ async function saveEdit() {
     const desc  = document.getElementById('ef-desc')?.value.trim();
     const video = document.getElementById('ef-video')?.value.trim();
     const tags  = (document.getElementById('ef-tags')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
-    const exs   = (document.getElementById('ef-exercises')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
-    const hw    = (document.getElementById('ef-homework')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    const exs   = [0,1,2].map(i=>({title:(document.getElementById(`ef-ex-title-${i}`)?.value||'').trim(),video_url:(document.getElementById(`ef-ex-url-${i}`)?.value||'').trim()})).filter(e=>e.title||e.video_url);
+    const hw    = [0,1,2].map(i=>({text:(document.getElementById(`ef-hw-text-${i}`)?.value||'').trim(),solution_url:(document.getElementById(`ef-hw-sol-${i}`)?.value||'').trim()})).filter(h=>h.text||h.solution_url);
     r = await fetch(`${API}/api/admin/lessons`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:lid, chapter_id:id, title, description:desc, video_url:video, tags, exercises:exs, homework:hw}) });
   }
   else if (type === 'edit-lesson') {
@@ -1972,8 +1974,8 @@ async function saveEdit() {
     const desc  = document.getElementById('ef-desc')?.value.trim();
     const video = document.getElementById('ef-video')?.value.trim();
     const tags  = (document.getElementById('ef-tags')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
-    const exs   = (document.getElementById('ef-exercises')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
-    const hw    = (document.getElementById('ef-homework')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    const exs   = [0,1,2].map(i=>({title:(document.getElementById(`ef-ex-title-${i}`)?.value||'').trim(),video_url:(document.getElementById(`ef-ex-url-${i}`)?.value||'').trim()})).filter(e=>e.title||e.video_url);
+    const hw    = [0,1,2].map(i=>({text:(document.getElementById(`ef-hw-text-${i}`)?.value||'').trim(),solution_url:(document.getElementById(`ef-hw-sol-${i}`)?.value||'').trim()})).filter(h=>h.text||h.solution_url);
     r = await fetch(`${API}/api/admin/lessons/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title, description:desc, video_url:video, tags, exercises:exs, homework:hw}) });
   }
 
@@ -2033,15 +2035,119 @@ function showToast(msg) {
 }
 
 // ── FULLSCREEN ───────────────────────────────────────────
-function enterFullscreen() {
-  const video = document.getElementById('lesson-video');
+function toggleFullscreen(btn) {
+  // Exit if already in fullscreen
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    return;
+  }
+  const video = btn instanceof HTMLButtonElement
+    ? btn.closest('.video-wrap')?.querySelector('video')
+    : document.getElementById('lesson-video');
   if (!video) return;
-  // iOS Safari uses webkitEnterFullscreen on the video element itself
   if (video.webkitEnterFullscreen) { video.webkitEnterFullscreen(); return; }
-  // Standard API — try the wrapper first, fallback to video
   const wrap = video.closest('.video-wrap') || video;
-  const req  = wrap.requestFullscreen || wrap.webkitRequestFullscreen || wrap.mozRequestFullScreen || wrap.msRequestFullscreen;
+  const req = wrap.requestFullscreen || wrap.webkitRequestFullscreen || wrap.mozRequestFullScreen;
   if (req) req.call(wrap);
+}
+
+// ── VIDEO URL FIX ────────────────────────────────────────
+function fixVideoUrl(url) {
+  if (!url) return '';
+  return url
+    .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+    .replace('?dl=0', '?raw=1');
+}
+
+// ── EXERCISE VIDEOS ──────────────────────────────────────
+function renderExerciseVideos(exercises) {
+  return [0, 1, 2].map(i => {
+    const ex = exercises[i];
+    if (!ex) {
+      return `<div class="ex-video-block">
+        <div class="ex-video-title">תרגיל ${i + 1}</div>
+        <div class="video-placeholder"><div class="video-placeholder-icon">📹</div><div class="video-placeholder-text">סרטון יתווסף בקרוב</div></div>
+      </div>`;
+    }
+    if (typeof ex === 'string') {
+      return `<div class="ex-video-block">
+        <div class="ex-video-title">תרגיל ${i + 1}</div>
+        <div class="exercise-item"><div class="exercise-q">${ex}</div></div>
+      </div>`;
+    }
+    const title = ex.title || `תרגיל ${i + 1}`;
+    if (ex.video_url) {
+      const src = fixVideoUrl(ex.video_url);
+      return `<div class="ex-video-block">
+        <div class="ex-video-title">${title}</div>
+        <div class="video-wrap">
+          <video controls controlslist="nodownload" playsinline oncontextmenu="return false">
+            <source src="${src}" type="video/mp4">
+          </video>
+          <button class="video-fullscreen-btn" onclick="toggleFullscreen(this)" title="מסך מלא">⛶</button>
+        </div>
+      </div>`;
+    }
+    return `<div class="ex-video-block">
+      <div class="ex-video-title">${title}</div>
+      <div class="video-placeholder"><div class="video-placeholder-icon">📹</div><div class="video-placeholder-text">סרטון יתווסף בקרוב</div></div>
+    </div>`;
+  }).join('');
+}
+
+// ── HOMEWORK WITH SOLUTIONS ──────────────────────────────
+function renderHomeworkList(homework) {
+  if (!homework.length) return '<div style="color:var(--text-3);font-size:16px">אין שיעורי בית לשיעור זה</div>';
+  return homework.map((h, i) => {
+    const text   = typeof h === 'string' ? h : (h.text || '');
+    const solUrl = typeof h === 'object' ? h.solution_url : '';
+    return `<div class="hw-item" id="hw-item-${i}">
+      <div class="hw-num">${i + 1}</div>
+      <div style="flex:1;min-width:0">
+        <div class="hw-text">${text}</div>
+        ${solUrl ? `<button class="hw-solution-btn" onclick="toggleSolution(${i},'${solUrl}')">▶ צפיה בפתרון</button>
+        <div class="hw-sol-video hidden" id="hw-sol-${i}"></div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleSolution(i, url) {
+  const el = document.getElementById(`hw-sol-${i}`);
+  if (!el) return;
+  if (el.classList.contains('hidden')) {
+    const src = fixVideoUrl(url);
+    el.innerHTML = `<div class="video-wrap" style="margin-top:8px">
+      <video controls controlslist="nodownload" playsinline autoplay oncontextmenu="return false">
+        <source src="${src}" type="video/mp4">
+      </video>
+      <button class="video-fullscreen-btn" onclick="toggleFullscreen(this)" title="מסך מלא">⛶</button>
+    </div>`;
+    el.classList.remove('hidden');
+  } else {
+    el.innerHTML = '';
+    el.classList.add('hidden');
+  }
+}
+
+// ── CONFETTI ─────────────────────────────────────────────
+function showConfetti() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden;';
+  document.body.appendChild(overlay);
+  const colors = ['#2563EB','#22C55E','#F59E0B','#EF4444','#8B5CF6','#06B6D4'];
+  for (let i = 0; i < 60; i++) {
+    const dot = document.createElement('div');
+    const size = 5 + Math.random() * 8;
+    dot.style.cssText = `position:absolute;left:${Math.random()*100}%;top:-15px;` +
+      `width:${size}px;height:${Math.random()>.5?size*1.5:size}px;` +
+      `background:${colors[Math.floor(Math.random()*colors.length)]};` +
+      `border-radius:${Math.random()>.5?'2px':'50%'};` +
+      `animation:confettiFall ${.9+Math.random()*.8}s ease-in ${Math.random()*.6}s forwards;`;
+    overlay.appendChild(dot);
+  }
+  setTimeout(() => overlay.remove(), 2500);
 }
 
 // Anti-copy
