@@ -713,19 +713,19 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
   <div class="section">
     <div class="section-title">גישה מהירה</div>
     <div class="qa-grid">
-      <div class="qa-tile" onclick="openTg('bot_questions')">
+      <div class="qa-tile" onclick="openLink('https://t.me/c/3854451624/3')">
         <div class="qa-tile-icon" style="background:#EFF6FF">🤖</div>
         <div class="qa-tile-label">בוט תרגול</div>
       </div>
-      <div class="qa-tile" onclick="openTg('chat_general')">
+      <div class="qa-tile" onclick="openLink('https://t.me/c/3854451624/10')">
         <div class="qa-tile-icon" style="background:#F0FDF4">💬</div>
         <div class="qa-tile-label">קהילה</div>
       </div>
-      <div class="qa-tile" onclick="openSupport()">
+      <div class="qa-tile" onclick="openLink('https://t.me/c/3854451624/5')">
         <div class="qa-tile-icon" style="background:#F0FDF4">🛟</div>
         <div class="qa-tile-label">תמיכה</div>
       </div>
-      <div class="qa-tile" onclick="openTg('events')">
+      <div class="qa-tile" onclick="openLink('https://t.me/c/3854451624/14')">
         <div class="qa-tile-icon" style="background:#FFFBEB">📅</div>
         <div class="qa-tile-label">אירועים</div>
       </div>
@@ -1975,6 +1975,9 @@ function syncProgress() {
 
 function openTg(key) {
   const url = TG_LINKS[key];
+  if (tg) tg.openTelegramLink(url); else window.open(url,'_blank');
+}
+function openLink(url) {
   if (tg) tg.openTelegramLink(url); else window.open(url,'_blank');
 }
 function openUpgrade() {
