@@ -573,6 +573,17 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
 }
 .mmt-continue-btn:active { transform: scale(.95); }
 
+.admin-shortcut-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: 8px;
+  background: rgba(255,255,255,.15); color: #fff;
+  border: 1px solid rgba(255,255,255,.3); border-radius: 20px;
+  padding: 5px 14px; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: 'Rubik', sans-serif;
+  backdrop-filter: blur(4px);
+}
+.admin-shortcut-btn:active { opacity: .7; }
+
 /* ══════════════════════════════════════════
    GRADE GRID
 ══════════════════════════════════════════ */
@@ -1091,9 +1102,22 @@ function renderHome() {
   document.getElementById('plan-badge').textContent = `${planData.emoji} מסלול ${plan}`;
   if (plan !== 'מנטור') document.getElementById('upgrade-banner').classList.remove('hidden');
 
+  // Admin button — only for phone 0535266628
+  const isAdmin = currentUser.phone === '0535266628';
+  let adminBtn = document.getElementById('admin-shortcut-btn');
+  if (isAdmin && !adminBtn) {
+    adminBtn = document.createElement('button');
+    adminBtn.id = 'admin-shortcut-btn';
+    adminBtn.className = 'admin-shortcut-btn';
+    adminBtn.textContent = '⚙️ אדמין';
+    adminBtn.onclick = () => navTo('admin');
+    document.getElementById('plan-badge').insertAdjacentElement('afterend', adminBtn);
+  } else if (!isAdmin && adminBtn) {
+    adminBtn.remove();
+  }
+
   const firstCourseId = planData.courses[0];
   lastCourseId = firstCourseId;
-  const firstCourse = curriculum.find(c => c.id === firstCourseId);
   renderGradeGrid();
   renderMinimap();
 }
@@ -1235,7 +1259,7 @@ function goContinue() {
   if (!course) return;
   for (const ch of course.chapters) {
     for (const ls of ch.lessons) {
-      if (!completedLessons[ls.id]) { openLesson(ls, courseId, ch.id); return; }
+      if (!completedLessons[ls.id]) { openLesson(courseId, ch.id, ls.id); return; }
     }
   }
   // All done — go to course screen
