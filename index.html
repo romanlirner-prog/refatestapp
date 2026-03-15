@@ -57,7 +57,7 @@ body {
 }
 
 /* ── LAYOUT ── */
-.page-wrap { max-width: 600px; margin: 0 auto; background: var(--bg); min-height: 100vh; }
+.page-wrap { max-width: 600px; margin: 0 auto; background: var(--bg); min-height: 100vh; overflow-x: hidden; }
 .screen { display: none; }
 .screen.active { display: block; }
 .hidden { display: none !important; }
@@ -158,7 +158,7 @@ body {
 }
 .hero-inner      { position: relative; z-index: 1; }
 .hero-greeting   { font-size: 16px; opacity: .75; margin-bottom: 3px; }
-.hero-name       { font-size: 28px; font-weight: 800; margin-bottom: 12px; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.hero-name       { font-size: 28px; font-weight: 800; margin-bottom: 12px; line-height: 1.1; word-break: break-word; }
 .plan-badge {
   display: inline-flex; align-items: center; gap: 6px;
   background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3);
@@ -550,9 +550,9 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
 }
 .minimap-top {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px; gap: 10px;
+  margin-bottom: 10px; gap: 10px; direction: rtl;
 }
-.minimap-top-left { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.minimap-top-right { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .mmt-title {
   font-size: 11px; font-weight: 700; letter-spacing: .07em;
   text-transform: uppercase; color: rgba(140,210,255,.8);
@@ -567,7 +567,7 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
   padding: 9px 18px; font-size: 15px; font-weight: 800;
   cursor: pointer; font-family: 'Rubik', sans-serif;
   box-shadow: 0 2px 12px rgba(34,197,94,.5);
-  white-space: nowrap;
+  white-space: nowrap; direction: rtl;
 }
 .mmt-continue-btn:active { transform: scale(.95); }
 .minimap-scroll-outer {
@@ -735,11 +735,11 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
       <!-- Minimap — pill inside hero -->
       <div class="minimap-wrap" id="minimap-wrap">
         <div class="minimap-top">
-          <div class="minimap-top-left">
+          <div class="minimap-top-right">
             <span class="mmt-title">📍 התקדמות</span>
             <span class="mmt-prog-txt" id="mmt-prog-txt">טוען…</span>
           </div>
-          <button class="mmt-continue-btn" id="mmt-continue-btn" onclick="goContinue()">▶ המשך</button>
+          <button class="mmt-continue-btn" id="mmt-continue-btn" onclick="goContinue()">המשך ▶</button>
         </div>
         <div class="minimap-scroll-outer" id="minimap-scroll-outer"></div>
         <div class="mmd-prog-bar"><div class="mmd-prog-fill" id="mmd-prog-fill" style="width:0%"></div></div>
