@@ -7,7 +7,10 @@ require('dotenv').config();
 const express = require('express');
 const crypto  = require('crypto');
 const path    = require('path');
+const fs      = require('fs');
 const { DatabaseSync } = require('node:sqlite');
+
+const CURRICULUM_JSON = path.join(__dirname, 'curriculum.json');
 
 const app = express();
 app.use(express.json());
@@ -93,9 +96,46 @@ db.exec(`
 `);
 
 // ─── SEED CURRICULUM ─────────────────────────────────────────────────
+// Seeds from getCurriculum()-format JSON (arrays already parsed, quiz.questions may be string or array)
+function seedFromJson(courses) {
+  for (const course of courses) {
+    db.prepare('INSERT OR IGNORE INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)')
+      .run(course.id, course.name, course.emoji||'📚', course.color||'ct-blue', course.meta||'', course.sort_order||0);
+    for (const ch of (course.chapters||[])) {
+      db.prepare('INSERT OR IGNORE INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)')
+        .run(ch.id, course.id, ch.title, ch.sort_order||0);
+      if (ch.quiz) {
+        const qs = typeof ch.quiz.questions === 'string' ? ch.quiz.questions : JSON.stringify(ch.quiz.questions||[]);
+        db.prepare('INSERT OR IGNORE INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)')
+          .run(ch.quiz.id, ch.id, ch.quiz.title||'מבחן מסכם', qs);
+      }
+      const lessons = ch.lessons||[];
+      for (let li = 0; li < lessons.length; li++) {
+        const ls = lessons[li];
+        db.prepare('INSERT OR IGNORE INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
+          .run(ls.id, ch.id, ls.title, ls.description||'', ls.video_url||'',
+               JSON.stringify(ls.tags||[]), JSON.stringify(ls.exercises||[]),
+               JSON.stringify(ls.homework||[]), ls.sort_order??li);
+      }
+    }
+  }
+  console.log('[Seed] Seeded from curriculum.json');
+}
+
 function seedCurriculum() {
   const count = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
   if (count > 0) return; // already seeded
+
+  // ── Try curriculum.json first (preserved across Vercel deploys via git) ──
+  if (fs.existsSync(CURRICULUM_JSON)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(CURRICULUM_JSON, 'utf8'));
+      seedFromJson(data);
+      return;
+    } catch (e) { console.error('[Seed] curriculum.json error:', e.message); }
+  }
+
+  // ── Fallback: hardcoded curriculum ────────────────────────────────────
 
   const curriculum = [
     {
@@ -281,6 +321,55 @@ function getCurriculum() {
   }));
 }
 
+function normalizeCurriculumData(data) {
+  for (const course of data) {
+    for (const ch of course.chapters) {
+      if (ch.quiz && typeof ch.quiz.questions === 'string') {
+        try { ch.quiz.questions = JSON.parse(ch.quiz.questions); } catch { ch.quiz.questions = []; }
+      }
+    }
+  }
+  return data;
+}
+
+// Push curriculum.json to GitHub → Vercel auto-redeploys → data survives cold starts
+async function syncToGitHub(data) {
+  const token = process.env.GITHUB_TOKEN;
+  const repo  = process.env.GITHUB_REPO; // e.g. "romanlirner-prog/refatestapp"
+  if (!token || !repo) return;
+  try {
+    const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
+    const apiBase = `https://api.github.com/repos/${repo}/contents/curriculum.json`;
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+      'User-Agent': 'miniapp-server'
+    };
+    // Get current file SHA (required for update)
+    const getRes  = await fetch(apiBase, { headers });
+    const getJson = await getRes.json();
+    const sha = getJson.sha;
+    // Commit updated file
+    const putRes = await fetch(apiBase, {
+      method: 'PUT', headers,
+      body: JSON.stringify({ message: 'chore: sync curriculum via admin', content, sha })
+    });
+    if (putRes.ok) console.log('[GitHub] curriculum.json synced ✓');
+    else console.error('[GitHub] sync failed:', await putRes.text());
+  } catch (e) { console.error('[GitHub sync]', e.message); }
+}
+
+function writeCurriculumJson() {
+  try {
+    const data = normalizeCurriculumData(getCurriculum());
+    // Write locally (works on dev, silently fails on Vercel read-only fs — that's OK)
+    try { fs.writeFileSync(CURRICULUM_JSON, JSON.stringify(data, null, 2), 'utf8'); } catch {}
+    // Push to GitHub so Vercel redeployment seeds DB with correct data
+    syncToGitHub(data).catch(e => console.error('[GitHub sync]', e.message));
+  } catch (e) { console.error('[writeCurriculumJson]', e.message); }
+}
+
 // ─── USER ROUTES ───────────────────────────────────────────────────────
 app.post('/api/auth', (req, res) => {
   const { identifier = '', telegram_id, telegram_name, telegram_username, telegram_photo, initData } = req.body;
@@ -397,6 +486,7 @@ app.post('/api/admin/courses', (req, res) => {
   if (!id || !name) return res.status(400).json({ error: 'id and name required' });
   const n = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
   db.prepare('INSERT INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)').run(id,name,emoji,color,meta,n);
+  writeCurriculumJson();
   res.json({ ok: true });
 });
 
@@ -404,6 +494,7 @@ app.put('/api/admin/courses/:id', (req, res) => {
   const { name, emoji, color, meta, sort_order } = req.body;
   db.prepare('UPDATE courses SET name=COALESCE(?,name), emoji=COALESCE(?,emoji), color=COALESCE(?,color), meta=COALESCE(?,meta), sort_order=COALESCE(?,sort_order) WHERE id=?')
     .run(name||null, emoji||null, color||null, meta||null, sort_order??null, req.params.id);
+  writeCurriculumJson();
   res.json({ ok: true });
 });
 
@@ -416,6 +507,7 @@ app.delete('/api/admin/courses/:id', (req, res) => {
   }
   db.prepare('DELETE FROM chapters WHERE course_id=?').run(cid);
   db.prepare('DELETE FROM courses WHERE id=?').run(cid);
+  writeCurriculumJson();
   res.json({ ok: true });
 });
 
@@ -425,12 +517,14 @@ app.post('/api/admin/chapters', (req, res) => {
   if (!id || !course_id || !title) return res.status(400).json({ error: 'missing fields' });
   const n = db.prepare('SELECT COUNT(*) as n FROM chapters WHERE course_id=?').get(course_id).n;
   db.prepare('INSERT INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)').run(id,course_id,title,n);
+  writeCurriculumJson();
   res.json({ ok: true });
 });
 
 app.put('/api/admin/chapters/:id', (req, res) => {
   const { title, sort_order } = req.body;
   db.prepare('UPDATE chapters SET title=COALESCE(?,title), sort_order=COALESCE(?,sort_order) WHERE id=?').run(title||null, sort_order??null, req.params.id);
+  writeCurriculumJson();
   res.json({ ok: true });
 });
 
@@ -439,6 +533,7 @@ app.delete('/api/admin/chapters/:id', (req, res) => {
   db.prepare('DELETE FROM lessons WHERE chapter_id=?').run(cid);
   db.prepare('DELETE FROM quizzes WHERE chapter_id=?').run(cid);
   db.prepare('DELETE FROM chapters WHERE id=?').run(cid);
+  writeCurriculumJson();
   res.json({ ok: true });
 });
 
@@ -449,6 +544,7 @@ app.post('/api/admin/lessons', (req, res) => {
   const n = db.prepare('SELECT COUNT(*) as n FROM lessons WHERE chapter_id=?').get(chapter_id).n;
   db.prepare('INSERT INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
     .run(id,chapter_id,title,description,video_url,JSON.stringify(tags),JSON.stringify(exercises),JSON.stringify(homework),n);
+  writeCurriculumJson();
   res.json({ ok: true });
 });
 
@@ -466,11 +562,13 @@ app.put('/api/admin/lessons/:id', (req, res) => {
       homework?JSON.stringify(homework):null,
       sort_order??null, req.params.id
     );
+  writeCurriculumJson();
   res.json({ ok: true });
 });
 
 app.delete('/api/admin/lessons/:id', (req, res) => {
   db.prepare('DELETE FROM lessons WHERE id=?').run(req.params.id);
+  writeCurriculumJson();
   res.json({ ok: true });
 });
 
@@ -485,7 +583,15 @@ app.put('/api/admin/quizzes/:chapter_id', (req, res) => {
     const id = 'qz_' + Date.now();
     db.prepare('INSERT INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)').run(id, req.params.chapter_id, title||'מבחן מסכם', JSON.stringify(questions||[]));
   }
+  writeCurriculumJson();
   res.json({ ok: true });
+});
+
+// ─── ADMIN EXPORT ─────────────────────────────────────────────────────
+app.get('/api/admin/export-curriculum', (req, res) => {
+  const data = normalizeCurriculumData(getCurriculum());
+  res.setHeader('Content-Disposition', 'attachment; filename="curriculum.json"');
+  res.json(data);
 });
 
 // ─── SEED (dev only) ─────────────────────────────────────────────────
