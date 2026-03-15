@@ -61,47 +61,62 @@ db.exec(`
 try { db.exec("ALTER TABLE users ADD COLUMN completed_lessons TEXT DEFAULT '{}'"); } catch {}
 
 // ─── CURRICULUM STATE (GitHub JSON = source of truth) ─────────────────
-// curriculumData lives in-memory. On cold start it's fetched from GitHub.
-// Every admin save writes directly to GitHub — no SQLite for curriculum.
+// Step 1 (synchronous, instant): load from bundled local file → data immediately available
+// Step 2 (async, background):    refresh from GitHub → overwrites with latest version
+// Admin saves always await the GitHub refresh before writing back.
+
 let curriculumData = [];
-let _initPromise   = null;
+
+// ── Synchronous bootstrap from bundled file (runs at module load, no latency) ──
+(function syncBootstrap() {
+  const paths = [
+    CURRICULUM_JSON,
+    path.join(process.cwd(), 'curriculum.json'),
+  ];
+  for (const p of paths) {
+    try {
+      if (fs.existsSync(p)) {
+        const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+        if (Array.isArray(data) && data.length > 0) {
+          curriculumData = data;
+          console.log('[Curriculum] Bootstrap from', p, '—', curriculumData.length, 'courses');
+          return;
+        }
+      }
+    } catch {}
+  }
+  curriculumData = getHardcodedCurriculum();
+  console.log('[Curriculum] Bootstrap: using hardcoded defaults');
+})();
+
+// ── Async refresh from GitHub (runs in background, overwrites once ready) ──
+let _initPromise = null;
 
 async function initCurriculum() {
   if (_initPromise) return _initPromise;
   _initPromise = (async () => {
-    // 1. Try GitHub (always the latest version)
-    if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO) {
-      try {
-        const token = process.env.GITHUB_TOKEN;
-        const repo  = process.env.GITHUB_REPO;
-        const res   = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum.json`, {
-          headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
-        });
-        if (res.ok) {
-          const json = await res.json();
-          curriculumData = JSON.parse(Buffer.from(json.content, 'base64').toString('utf8'));
-          console.log('[Curriculum] Loaded from GitHub ✓', curriculumData.length, 'courses');
-          return;
-        }
-        console.warn('[Curriculum] GitHub returned', res.status);
-      } catch (e) { console.error('[Curriculum] GitHub load failed:', e.message); }
-    }
-    // 2. Fallback: bundled local file
-    if (fs.existsSync(CURRICULUM_JSON)) {
-      try {
-        curriculumData = JSON.parse(fs.readFileSync(CURRICULUM_JSON, 'utf8'));
-        console.log('[Curriculum] Loaded from local file');
-        return;
-      } catch (e) { console.error('[Curriculum] local file error:', e.message); }
-    }
-    // 3. Hardcoded defaults
-    curriculumData = getHardcodedCurriculum();
-    console.log('[Curriculum] Using hardcoded defaults');
+    if (!process.env.GITHUB_TOKEN || !process.env.GITHUB_REPO) return;
+    try {
+      const token = process.env.GITHUB_TOKEN;
+      const repo  = process.env.GITHUB_REPO;
+      const res   = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum.json`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' },
+        signal: AbortSignal.timeout(8000),   // 8s timeout — don't block Vercel
+      });
+      if (!res.ok) { console.warn('[Curriculum] GitHub returned', res.status); return; }
+      const json = await res.json();
+      if (!json.content) { console.warn('[Curriculum] GitHub: no content (file too large?)'); return; }
+      const data = JSON.parse(Buffer.from(json.content, 'base64').toString('utf8'));
+      if (Array.isArray(data) && data.length > 0) {
+        curriculumData = data;
+        console.log('[Curriculum] Refreshed from GitHub ✓', curriculumData.length, 'courses');
+      }
+    } catch (e) { console.error('[Curriculum] GitHub refresh failed:', e.message); }
   })();
   return _initPromise;
 }
 
-// Start loading immediately (non-blocking)
+// Start GitHub refresh in background immediately
 initCurriculum();
 
 // ─── GITHUB SYNC ──────────────────────────────────────────────────────
@@ -327,8 +342,8 @@ app.post('/api/progress', (req, res) => {
 });
 
 // ─── CURRICULUM READ ───────────────────────────────────────────────────
-app.get('/api/curriculum', async (req, res) => {
-  await initCurriculum();
+app.get('/api/curriculum', (req, res) => {
+  // Return immediately from in-memory state (bootstrapped synchronously at startup)
   res.json(curriculumData);
 });
 
@@ -374,8 +389,7 @@ app.get('/api/admin/stats', (req, res) => {
 // ─── ADMIN CURRICULUM CRUD (in-memory + GitHub) ────────────────────────
 
 // GET: return current curriculum
-app.get('/api/admin/courses', async (req, res) => {
-  await initCurriculum();
+app.get('/api/admin/courses', (req, res) => {
   res.json(curriculumData);
 });
 
