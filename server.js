@@ -11,7 +11,10 @@ const { DatabaseSync } = require('node:sqlite');
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+
+const staticDir = process.env.VERCEL ? path.join(process.cwd()) : path.join(__dirname);
+app.use(express.static(staticDir));
+app.get('/', (req, res) => res.sendFile(path.join(staticDir, 'index.html')));
 
 // ─── DB ────────────────────────────────────────────────────────────────
 const DB_PATH = process.env.VERCEL ? '/tmp/miniapp.db' : path.join(__dirname, 'miniapp.db');
