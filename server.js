@@ -69,10 +69,17 @@ let curriculumData = [];
 
 // ── Synchronous bootstrap from bundled file (runs at module load, no latency) ──
 (function syncBootstrap() {
-  const paths = [
-    CURRICULUM_JSON,
-    path.join(process.cwd(), 'curriculum.json'),
-  ];
+  // 1. Try require() — always bundled by Vercel/webpack (most reliable)
+  try {
+    const data = require('./curriculum.json');
+    if (Array.isArray(data) && data.length > 0) {
+      curriculumData = JSON.parse(JSON.stringify(data)); // deep clone
+      console.log('[Curriculum] Bootstrap via require() —', curriculumData.length, 'courses');
+      return;
+    }
+  } catch {}
+  // 2. Try fs.readFileSync for local dev
+  const paths = [CURRICULUM_JSON, path.join(process.cwd(), 'curriculum.json')];
   for (const p of paths) {
     try {
       if (fs.existsSync(p)) {
@@ -85,6 +92,7 @@ let curriculumData = [];
       }
     } catch {}
   }
+  // 3. Hardcoded fallback
   curriculumData = getHardcodedCurriculum();
   console.log('[Curriculum] Bootstrap: using hardcoded defaults');
 })();
