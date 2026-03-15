@@ -19,7 +19,7 @@ const staticDir = process.env.VERCEL ? path.join(process.cwd()) : path.join(__di
 app.use(express.static(staticDir));
 app.get('/', (req, res) => res.sendFile(path.join(staticDir, 'index.html')));
 
-// ─── DB ────────────────────────────────────────────────────────────────
+// ─── DB (users / purchases / quiz_results only) ────────────────────────
 const DB_PATH = process.env.VERCEL ? '/tmp/miniapp.db' : path.join(__dirname, 'miniapp.db');
 const db = new DatabaseSync(DB_PATH);
 db.exec('PRAGMA journal_mode = WAL');
@@ -47,44 +47,6 @@ db.exec(`
     linked_at   DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
-  CREATE TABLE IF NOT EXISTS courses (
-    id         TEXT PRIMARY KEY,
-    name       TEXT NOT NULL,
-    emoji      TEXT DEFAULT '📚',
-    color      TEXT DEFAULT 'ct-blue',
-    meta       TEXT DEFAULT '',
-    sort_order INTEGER DEFAULT 0
-  );
-
-  CREATE TABLE IF NOT EXISTS chapters (
-    id         TEXT PRIMARY KEY,
-    course_id  TEXT NOT NULL,
-    title      TEXT NOT NULL,
-    sort_order INTEGER DEFAULT 0,
-    FOREIGN KEY (course_id) REFERENCES courses(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS lessons (
-    id          TEXT PRIMARY KEY,
-    chapter_id  TEXT NOT NULL,
-    title       TEXT NOT NULL,
-    description TEXT DEFAULT '',
-    video_url   TEXT DEFAULT '',
-    tags        TEXT DEFAULT '[]',
-    exercises   TEXT DEFAULT '[]',
-    homework    TEXT DEFAULT '[]',
-    sort_order  INTEGER DEFAULT 0,
-    FOREIGN KEY (chapter_id) REFERENCES chapters(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS quizzes (
-    id         TEXT PRIMARY KEY,
-    chapter_id TEXT UNIQUE NOT NULL,
-    title      TEXT DEFAULT 'מבחן מסכם',
-    questions  TEXT DEFAULT '[]',
-    FOREIGN KEY (chapter_id) REFERENCES chapters(id)
-  );
-
   CREATE TABLE IF NOT EXISTS quiz_results (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     user_telegram_id TEXT,
@@ -95,181 +57,176 @@ db.exec(`
   );
 `);
 
-// Add completed_lessons column if it doesn't exist yet (migration)
+// Migration: add completed_lessons column if missing
 try { db.exec("ALTER TABLE users ADD COLUMN completed_lessons TEXT DEFAULT '{}'"); } catch {}
 
-// ─── SEED CURRICULUM ─────────────────────────────────────────────────
-// Seeds from getCurriculum()-format JSON (arrays already parsed, quiz.questions may be string or array)
-function seedFromJson(courses) {
-  for (const course of courses) {
-    db.prepare('INSERT OR IGNORE INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)')
-      .run(course.id, course.name, course.emoji||'📚', course.color||'ct-blue', course.meta||'', course.sort_order||0);
-    for (const ch of (course.chapters||[])) {
-      db.prepare('INSERT OR IGNORE INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)')
-        .run(ch.id, course.id, ch.title, ch.sort_order||0);
-      if (ch.quiz) {
-        const qs = typeof ch.quiz.questions === 'string' ? ch.quiz.questions : JSON.stringify(ch.quiz.questions||[]);
-        db.prepare('INSERT OR IGNORE INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)')
-          .run(ch.quiz.id, ch.id, ch.quiz.title||'מבחן מסכם', qs);
-      }
-      const lessons = ch.lessons||[];
-      for (let li = 0; li < lessons.length; li++) {
-        const ls = lessons[li];
-        db.prepare('INSERT OR IGNORE INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
-          .run(ls.id, ch.id, ls.title, ls.description||'', ls.video_url||'',
-               JSON.stringify(ls.tags||[]), JSON.stringify(ls.exercises||[]),
-               JSON.stringify(ls.homework||[]), ls.sort_order??li);
-      }
+// ─── CURRICULUM STATE (GitHub JSON = source of truth) ─────────────────
+// curriculumData lives in-memory. On cold start it's fetched from GitHub.
+// Every admin save writes directly to GitHub — no SQLite for curriculum.
+let curriculumData = [];
+let _initPromise   = null;
+
+async function initCurriculum() {
+  if (_initPromise) return _initPromise;
+  _initPromise = (async () => {
+    // 1. Try GitHub (always the latest version)
+    if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO) {
+      try {
+        const token = process.env.GITHUB_TOKEN;
+        const repo  = process.env.GITHUB_REPO;
+        const res   = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum.json`, {
+          headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          curriculumData = JSON.parse(Buffer.from(json.content, 'base64').toString('utf8'));
+          console.log('[Curriculum] Loaded from GitHub ✓', curriculumData.length, 'courses');
+          return;
+        }
+        console.warn('[Curriculum] GitHub returned', res.status);
+      } catch (e) { console.error('[Curriculum] GitHub load failed:', e.message); }
     }
-  }
-  console.log('[Seed] Seeded from curriculum.json');
+    // 2. Fallback: bundled local file
+    if (fs.existsSync(CURRICULUM_JSON)) {
+      try {
+        curriculumData = JSON.parse(fs.readFileSync(CURRICULUM_JSON, 'utf8'));
+        console.log('[Curriculum] Loaded from local file');
+        return;
+      } catch (e) { console.error('[Curriculum] local file error:', e.message); }
+    }
+    // 3. Hardcoded defaults
+    curriculumData = getHardcodedCurriculum();
+    console.log('[Curriculum] Using hardcoded defaults');
+  })();
+  return _initPromise;
 }
 
-function seedCurriculum() {
-  const count = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
-  if (count > 0) return; // already seeded
+// Start loading immediately (non-blocking)
+initCurriculum();
 
-  // ── Try curriculum.json first (preserved across Vercel deploys via git) ──
-  if (fs.existsSync(CURRICULUM_JSON)) {
-    try {
-      const data = JSON.parse(fs.readFileSync(CURRICULUM_JSON, 'utf8'));
-      seedFromJson(data);
-      return;
-    } catch (e) { console.error('[Seed] curriculum.json error:', e.message); }
+// ─── GITHUB SYNC ──────────────────────────────────────────────────────
+async function syncToGitHub(data) {
+  const token = process.env.GITHUB_TOKEN;
+  const repo  = process.env.GITHUB_REPO;
+  if (!token || !repo) { console.warn('[GitHub] No token/repo configured'); return; }
+  try {
+    const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
+    const apiBase = `https://api.github.com/repos/${repo}/contents/curriculum.json`;
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+      'User-Agent': 'miniapp-server'
+    };
+    const getRes  = await fetch(apiBase, { headers });
+    const getJson = await getRes.json();
+    const sha = getJson.sha;
+    const putRes = await fetch(apiBase, {
+      method: 'PUT', headers,
+      body: JSON.stringify({ message: 'chore: sync curriculum via admin', content, sha })
+    });
+    if (putRes.ok) console.log('[GitHub] curriculum.json synced ✓');
+    else console.error('[GitHub] sync failed:', await putRes.text());
+  } catch (e) { console.error('[GitHub sync]', e.message); }
+}
+
+async function saveCurriculum() {
+  // Write to local file (dev only — silently fails on Vercel read-only fs)
+  try { fs.writeFileSync(CURRICULUM_JSON, JSON.stringify(curriculumData, null, 2), 'utf8'); } catch {}
+  // Push to GitHub (the real persistent store)
+  await syncToGitHub(curriculumData);
+}
+
+// ─── CURRICULUM HELPERS ───────────────────────────────────────────────
+function findCourse(id) {
+  return curriculumData.find(c => c.id === id) || null;
+}
+function findChapter(id) {
+  for (const c of curriculumData) {
+    const ch = c.chapters?.find(ch => ch.id === id);
+    if (ch) return ch;
   }
+  return null;
+}
+function findLesson(id) {
+  for (const c of curriculumData) {
+    for (const ch of (c.chapters || [])) {
+      const ls = ch.lessons?.find(l => l.id === id);
+      if (ls) return ls;
+    }
+  }
+  return null;
+}
 
-  // ── Fallback: hardcoded curriculum ────────────────────────────────────
-
-  const curriculum = [
+// ─── HARDCODED FALLBACK ───────────────────────────────────────────────
+function getHardcodedCurriculum() {
+  return [
     {
-      id: 'חטיבה-תיכון', name: 'חטיבה → תיכון', emoji: '📐', color: 'ct-blue', meta: '32 שיעורים · הכנה מלאה', sort_order: 0,
+      id: 'חטיבה-תיכון', name: 'חטיבה → תיכון', emoji: '📐', color: 'ct-blue',
+      meta: '32 שיעורים · הכנה מלאה', sort_order: 0,
       chapters: [
         {
-          id: 'ch1', title: 'מספרים ושברים', sort_order: 0,
-          quiz: { id: 'qz1', title: 'מבחן: מספרים ושברים', questions: [
+          id: 'ch1', course_id: 'חטיבה-תיכון', title: 'מספרים ושברים', sort_order: 0,
+          quiz: { id: 'qz1', chapter_id: 'ch1', title: 'מבחן: מספרים ושברים', questions: [
             { q: 'כמה הוא (-3) + 7?', options: ['4','10','-10','-4'], answer: 0 },
             { q: 'מה הוא הערך המוחלט של -5?', options: ['5','-5','0','25'], answer: 0 },
             { q: 'כמה הוא ²⁄₃ + ¹⁄₄?', options: ['¹¹⁄₁₂','³⁄₇','⅚','¾'], answer: 0 },
           ]},
           lessons: [
-            { id: 'c1l1', title: 'מספרים טבעיים ושלמים', description: 'נלמד על מספרים שלמים, ערך מוחלט וסדר פעולות חשבון.', tags: ['תיאוריה'], exercises: ['פתור: (-3) + 7 - (-2)', 'חשב: |−5| + |3|', 'סדר מקטן לגדול: -4, 2, -1, 0, 3'], hw: ['דף תרגול 1 — שאלות 1–10', 'אתר: 5 תרגילי חזרה על מספרים שלמים'] },
-            { id: 'c1l2', title: 'שברים רגילים וחישובים', description: 'חיבור, חיסור, כפל וחילוק של שברים. פישוט שברים.', tags: ['תיאוריה', 'תרגול'], exercises: ['חשב: ²⁄₃ + ¹⁄₄', 'פשט: ⁶⁄₉', 'חשב: ³⁄₄ × ⁸⁄₉'], hw: ['דף תרגול 2 — שאלות 1–12', 'חזור על המרה בין שברים'] },
-            { id: 'c1l3', title: 'עשרוניים ואחוזים', description: 'המרה בין עשרוניים לאחוזים ופתרון שאלות אחוזים.', tags: ['תרגול'], exercises: ['המר לאחוז: 0.35', 'מה הם 20% מ-80?', 'ירידת מחיר של 15% מ-200 ₪'], hw: ['דף תרגול 3 — שאלות 1–8'] },
+            { id: 'c1l1', chapter_id: 'ch1', title: 'מספרים טבעיים ושלמים', description: 'נלמד על מספרים שלמים, ערך מוחלט וסדר פעולות חשבון.', video_url: '', tags: ['תיאוריה'], exercises: [], homework: [], sort_order: 0 },
+            { id: 'c1l2', chapter_id: 'ch1', title: 'שברים רגילים וחישובים', description: 'חיבור, חיסור, כפל וחילוק של שברים.', video_url: '', tags: ['תיאוריה','תרגול'], exercises: [], homework: [], sort_order: 1 },
+            { id: 'c1l3', chapter_id: 'ch1', title: 'עשרוניים ואחוזים', description: 'המרה בין עשרוניים לאחוזים.', video_url: '', tags: ['תרגול'], exercises: [], homework: [], sort_order: 2 },
           ]
         },
         {
-          id: 'ch2', title: 'אלגברה — ביטויים ומשוואות', sort_order: 1,
-          quiz: { id: 'qz2', title: 'מבחן: אלגברה', questions: [
+          id: 'ch2', course_id: 'חטיבה-תיכון', title: 'אלגברה — ביטויים ומשוואות', sort_order: 1,
+          quiz: { id: 'qz2', chapter_id: 'ch2', title: 'מבחן: אלגברה', questions: [
             { q: 'פשט: 3x + 2x - x', options: ['4x','6x','5x','x'], answer: 0 },
             { q: 'פתור: 2x + 5 = 13', options: ['x=4','x=9','x=3','x=5'], answer: 0 },
-            { q: 'פתור: x² - 5x + 6 = 0', options: ['x=2,3','x=1,6','x=-2,-3','x=0,5'], answer: 0 },
           ]},
           lessons: [
-            { id: 'c2l1', title: 'ביטויים אלגבריים', description: 'פישוט ביטויים, הוצאת גורם משותף וכפל סוגריים.', tags: ['תיאוריה'], exercises: ['פשט: 3x + 2x - x', 'הוצא גורם משותף: 6x² + 9x', 'הכפל: (x+2)(x-3)'], hw: ['דף ביטויים — שאלות 1–15'] },
-            { id: 'c2l2', title: 'משוואה ממעלה ראשונה', description: 'פתרון משוואות לינאריות ושאלות מילוליות.', tags: ['תרגול'], exercises: ['פתור: 2x + 5 = 13', 'פתור: 3(x-2) = 9', 'גיל עמי הוא פי 2 מאחיו, יחד 24 — מה גילו?'], hw: ['דף משוואות — שאלות 1–10', 'שאלות מילוליות 3 ראשונות'] },
-            { id: 'c2l3', title: 'משוואה ממעלה שנייה', description: 'פתרון ריבועית: פירוק לגורמים ונוסחת שורשים.', tags: ['תיאוריה', 'תרגול'], exercises: ['פתור: x² - 5x + 6 = 0', 'פתור: 2x² - 8 = 0', 'פתור: x² + 4x + 4 = 0'], hw: ['דף ריבועית — שאלות 1–12'] },
-            { id: 'c2l4', title: 'אי-שוויונות', description: 'פתרון אי-שוויונות ויצוג על ציר המספרים.', tags: ['תרגול'], exercises: ['פתור: 2x - 3 > 7', 'פתור: -x + 4 ≤ 2', 'מתי 3x + 1 < 10?'], hw: ['דף אי-שוויונות — שאלות 1–8'] },
+            { id: 'c2l1', chapter_id: 'ch2', title: 'ביטויים אלגבריים', description: '', video_url: '', tags: ['תיאוריה'], exercises: [], homework: [], sort_order: 0 },
+            { id: 'c2l2', chapter_id: 'ch2', title: 'משוואה ממעלה ראשונה', description: '', video_url: '', tags: ['תרגול'], exercises: [], homework: [], sort_order: 1 },
+            { id: 'c2l3', chapter_id: 'ch2', title: 'משוואה ממעלה שנייה', description: '', video_url: '', tags: ['תיאוריה','תרגול'], exercises: [], homework: [], sort_order: 2 },
+            { id: 'c2l4', chapter_id: 'ch2', title: 'אי-שוויונות', description: '', video_url: '', tags: ['תרגול'], exercises: [], homework: [], sort_order: 3 },
           ]
         },
-        {
-          id: 'ch3', title: 'גאומטריה', sort_order: 2,
-          quiz: { id: 'qz3', title: 'מבחן: גאומטריה', questions: [
-            { q: 'מהי הזווית הנשלמת ל-65°?', options: ['115°','25°','90°','180°'], answer: 0 },
-            { q: 'במשולש עם זוויות 40° ו-70°, מהי הזווית השלישית?', options: ['70°','80°','60°','90°'], answer: 0 },
-            { q: 'שטח ריבוע עם צלע 7:', options: ['49','14','28','21'], answer: 0 },
-          ]},
-          lessons: [
-            { id: 'c3l1', title: 'זוויות ומשפטים בסיסיים', description: 'זוויות משלימות, זוויות במשולש ומשפטים על קווים מקבילים.', tags: ['תיאוריה'], exercises: ['מצא זווית נשלמת ל-65°', 'זוויות במשולש: 40°, 70°, ?', 'זוויות על צלע מקבילות'], hw: ['דף גאומטריה — שאלות 1–10'] },
-            { id: 'c3l2', title: 'משפט פיתגורס', description: 'הכרת המשפט, שימוש ובדיקה.', tags: ['תרגול'], exercises: ['מצא צלע חסרה: 3, 4, ?', 'בדוק: האם 5, 12, 13 הם ישר-זווי?', 'גובה 8, אלכסון 10 — מה הרוחב?'], hw: ['דף פיתגורס — שאלות 1–8'] },
-            { id: 'c3l3', title: 'שטחים ונפחים', description: 'חישוב שטח ונפח של צורות מישוריות ותלת-מימדיות.', tags: ['תיאוריה', 'תרגול'], exercises: ['שטח ריבוע עם צלע 7', 'שטח משולש: בסיס 6, גובה 4', 'נפח תיבה 5×3×2'], hw: ['דף שטחים — שאלות 1–12'] },
-          ]
-        },
-        {
-          id: 'ch4', title: 'פונקציות לינאריות', sort_order: 3,
-          quiz: { id: 'qz4', title: 'מבחן: פונקציות', questions: [
-            { q: 'האם (2,5) על y = 2x+1?', options: ['כן','לא'], answer: 0 },
-            { q: 'שיפוע: (1,2) ו-(3,8)?', options: ['3','2','4','6'], answer: 0 },
-          ]},
-          lessons: [
-            { id: 'c4l1', title: 'מושגי יסוד בפונקציה', description: 'תחום, טווח, נקודת חיתוך עם הצירים.', tags: ['תיאוריה'], exercises: ['האם (2,5) נמצאת על y=2x+1?', 'חשב f(3) עבור f(x)=4x-2', 'מצא חיתוך עם ציר y'], hw: ['דף פונקציות — שאלות 1–8'] },
-            { id: 'c4l2', title: 'שיפוע וקו ישר', description: 'חישוב שיפוע ומשוואת קו ישר.', tags: ['תרגול'], exercises: ['מצא שיפוע: (1,2) ו-(3,8)', 'משוואת קו: m=2, עובר (0,3)', 'חיתוך: y=x+2 ו- y=3x-4'], hw: ['דף שיפוע — שאלות 1–10'] },
-          ]
-        },
-        {
-          id: 'ch5', title: 'סטטיסטיקה', sort_order: 4,
-          quiz: { id: 'qz5', title: 'מבחן: סטטיסטיקה', questions: [
-            { q: 'ממוצע של: 3, 7, 5, 9, 1?', options: ['5','4','6','7'], answer: 0 },
-            { q: 'P(זוגי) בהטלת קוביה?', options: ['½','⅓','⅙','¼'], answer: 0 },
-          ]},
-          lessons: [
-            { id: 'c5l1', title: 'ממוצע, חציון, שכיח', description: 'חישוב מדדי מיקום מרכזיים.', tags: ['תיאוריה'], exercises: ['ממוצע: 3, 7, 5, 9, 1', 'חציון: 2, 8, 4, 6, 10', 'שכיח: 3, 5, 3, 7, 5, 3'], hw: ['דף סטטיסטיקה — שאלות 1–10'] },
-            { id: 'c5l2', title: 'הסתברות בסיסית', description: 'חישוב הסתברות של אירועים פשוטים ומורכבים.', tags: ['תרגול'], exercises: ['קוביה: P(זוגי)?', 'קלפים: P(מלך) מחפיסה?', 'שתי הטלות מטבע: P(שתי עצים)?'], hw: ['דף הסתברות — שאלות 1–8'] },
-          ]
-        }
       ]
     },
     {
-      id: 'הכנה לבגרות', name: 'הכנה לבגרות', emoji: '📝', color: 'ct-green', meta: '48 שיעורים · 3 רמות', sort_order: 1,
+      id: 'הכנה לבגרות', name: 'הכנה לבגרות', emoji: '📝', color: 'ct-green',
+      meta: '48 שיעורים · 3 רמות', sort_order: 1,
       chapters: [
         {
-          id: 'bg1', title: 'חזרה על בסיס', sort_order: 0,
-          quiz: { id: 'qz6', title: 'מבחן: חזרה על בסיס', questions: [
+          id: 'bg1', course_id: 'הכנה לבגרות', title: 'חזרה על בסיס', sort_order: 0,
+          quiz: { id: 'qz6', chapter_id: 'bg1', title: 'מבחן: חזרה על בסיס', questions: [
             { q: 'פשט: (2x²)³', options: ['8x⁶','6x⁶','8x⁵','2x⁶'], answer: 0 },
           ]},
           lessons: [
-            { id: 'b1l1', title: 'אלגברה — חזרה מהירה', description: 'חזרה על נושאי אלגברה מהחטיבה.', tags: ['חזרה'], exercises: ['פשט: (2x²)³', 'פתור: |x-3|=5', 'מערכת: x+y=5, 2x-y=4'], hw: ['חזרה על נוסחאות — דף 1'] },
-            { id: 'b1l2', title: 'פונקציות — חזרה', description: 'גרפים, נקודות קיצון ואסימפטוטות.', tags: ['חזרה', 'גרף'], exercises: ['שרטט: y=x²-4', 'מצא נקודות קיצון', 'פתור גרפית: x²=2x+3'], hw: ['גרפים — דף 2'] },
+            { id: 'b1l1', chapter_id: 'bg1', title: 'אלגברה — חזרה מהירה', description: '', video_url: '', tags: ['חזרה'], exercises: [], homework: [], sort_order: 0 },
+            { id: 'b1l2', chapter_id: 'bg1', title: 'פונקציות — חזרה', description: '', video_url: '', tags: ['חזרה'], exercises: [], homework: [], sort_order: 1 },
           ]
         },
-        {
-          id: 'bg2', title: 'מבנה שאלון הבגרות', sort_order: 1,
-          quiz: { id: 'qz7', title: 'מבחן: אסטרטגיה', questions: [
-            { q: 'כמה זמן יש לשאלון בגרות מלאה?', options: ['3 שעות','2 שעות','4 שעות','שעתיים וחצי'], answer: 0 },
-          ]},
-          lessons: [
-            { id: 'b2l1', title: 'הכרת השאלון ואסטרטגיה', description: 'מבנה שאלון 806, ניהול זמן ואסטרטגיית פתרון.', tags: ['אסטרטגיה'], exercises: ['ניהול זמן: שאלון לדוגמה', 'אלו שאלות לדלג ראשית?'], hw: ['קרא: הסבר מבנה שאלון 806', 'ענה על 5 שאלות מניסיון 2023'] },
-            { id: 'b2l2', title: 'שאלות מילוליות — שיטה', description: 'שיטת 4 שלבים לפתרון שאלות מילוליות.', tags: ['שיטה'], exercises: ['שאלה מילולית: ריבית פשוטה', 'שאלה: תנועה במהירות קבועה', 'שאלה: תערובות'], hw: ['10 שאלות מילוליות מניסיונות קודמים'] },
-          ]
-        }
       ]
     },
     {
-      id: 'בגרות מורחבת', name: "בגרות מורחבת (5 יח')", emoji: '🏆', color: 'ct-amber', meta: '28 שיעורים · רמה גבוהה', sort_order: 2,
+      id: 'בגרות מורחבת', name: "בגרות מורחבת (5 יח')", emoji: '🏆', color: 'ct-amber',
+      meta: '28 שיעורים · רמה גבוהה', sort_order: 2,
       chapters: [
         {
-          id: 'mr1', title: 'חשבון דיפרנציאלי', sort_order: 0,
-          quiz: { id: 'qz8', title: 'מבחן: נגזרות', questions: [
+          id: 'mr1', course_id: 'בגרות מורחבת', title: 'חשבון דיפרנציאלי', sort_order: 0,
+          quiz: { id: 'qz8', chapter_id: 'mr1', title: 'מבחן: נגזרות', questions: [
             { q: "f'(x) של x³:", options: ['3x²','x²','3x','x³'], answer: 0 },
           ]},
           lessons: [
-            { id: 'm1l1', title: 'גבולות ורציפות', description: 'חישוב גבולות ובדיקת רציפות.', tags: ['תיאוריה'], exercises: ['lim(x→2) (x²-4)/(x-2)', 'בדוק רציפות: f(x)=|x|/x', 'מצא אסימפטוטה אנכית'], hw: ['גבולות — שאלות 1–8'] },
-            { id: 'm1l2', title: 'נגזרות — כללים', description: 'כללי גזירה: חיבור, מכפלה, מנה, שרשרת.', tags: ['תרגול'], exercises: ["f'(x): x³+5x²-2x+1", "f'(x): (x²+1)(x-3)", "f'(x): (3x+2)/(x-1)"], hw: ['נגזרות — שאלות 1–12'] },
+            { id: 'm1l1', chapter_id: 'mr1', title: 'גבולות ורציפות', description: '', video_url: '', tags: ['תיאוריה'], exercises: [], homework: [], sort_order: 0 },
+            { id: 'm1l2', chapter_id: 'mr1', title: 'נגזרות — כללים', description: '', video_url: '', tags: ['תרגול'], exercises: [], homework: [], sort_order: 1 },
           ]
         }
       ]
     }
   ];
-
-  for (const course of curriculum) {
-    db.prepare('INSERT OR IGNORE INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)')
-      .run(course.id, course.name, course.emoji, course.color, course.meta, course.sort_order);
-    for (const ch of course.chapters) {
-      db.prepare('INSERT OR IGNORE INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)')
-        .run(ch.id, course.id, ch.title, ch.sort_order);
-      if (ch.quiz) {
-        db.prepare('INSERT OR IGNORE INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)')
-          .run(ch.quiz.id, ch.id, ch.quiz.title, JSON.stringify(ch.quiz.questions));
-      }
-      for (let li = 0; li < ch.lessons.length; li++) {
-        const ls = ch.lessons[li];
-        db.prepare('INSERT OR IGNORE INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
-          .run(ls.id, ch.id, ls.title, ls.description, '', JSON.stringify(ls.tags), JSON.stringify(ls.exercises), JSON.stringify(ls.hw), li);
-      }
-    }
-  }
-  console.log('[Seed] Curriculum seeded.');
 }
-seedCurriculum();
 
 // ─── HELPERS ───────────────────────────────────────────────────────────
 function verifyTgInitData(initData) {
@@ -297,81 +254,6 @@ function resolvePlan(productName = '', amount = 0) {
 
 function normalizePhone(phone = '') {
   return phone.replace(/[\s\-+]/g, '');
-}
-
-function getCurriculum() {
-  const courses  = db.prepare('SELECT * FROM courses ORDER BY sort_order').all();
-  const chapters = db.prepare('SELECT * FROM chapters ORDER BY sort_order').all();
-  const lessons  = db.prepare('SELECT * FROM lessons ORDER BY sort_order').all();
-  const quizzes  = db.prepare('SELECT * FROM quizzes').all();
-
-  return courses.map(c => ({
-    ...c,
-    chapters: chapters
-      .filter(ch => ch.course_id === c.id)
-      .map(ch => ({
-        ...ch,
-        quiz: quizzes.find(q => q.chapter_id === ch.id) || null,
-        lessons: lessons
-          .filter(l => l.chapter_id === ch.id)
-          .map(l => ({
-            ...l,
-            tags:      JSON.parse(l.tags      || '[]'),
-            exercises: JSON.parse(l.exercises || '[]'),
-            homework:  JSON.parse(l.homework  || '[]'),
-          }))
-      }))
-  }));
-}
-
-function normalizeCurriculumData(data) {
-  for (const course of data) {
-    for (const ch of course.chapters) {
-      if (ch.quiz && typeof ch.quiz.questions === 'string') {
-        try { ch.quiz.questions = JSON.parse(ch.quiz.questions); } catch { ch.quiz.questions = []; }
-      }
-    }
-  }
-  return data;
-}
-
-// Push curriculum.json to GitHub → Vercel auto-redeploys → data survives cold starts
-async function syncToGitHub(data) {
-  const token = process.env.GITHUB_TOKEN;
-  const repo  = process.env.GITHUB_REPO; // e.g. "romanlirner-prog/refatestapp"
-  if (!token || !repo) return;
-  try {
-    const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
-    const apiBase = `https://api.github.com/repos/${repo}/contents/curriculum.json`;
-    const headers = {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github+json',
-      'Content-Type': 'application/json',
-      'User-Agent': 'miniapp-server'
-    };
-    // Get current file SHA (required for update)
-    const getRes  = await fetch(apiBase, { headers });
-    const getJson = await getRes.json();
-    const sha = getJson.sha;
-    // Commit updated file
-    const putRes = await fetch(apiBase, {
-      method: 'PUT', headers,
-      body: JSON.stringify({ message: 'chore: sync curriculum via admin', content, sha })
-    });
-    if (putRes.ok) console.log('[GitHub] curriculum.json synced ✓');
-    else console.error('[GitHub] sync failed:', await putRes.text());
-  } catch (e) { console.error('[GitHub sync]', e.message); }
-}
-
-// Sync curriculum to GitHub immediately (awaited before response — safe on Vercel serverless)
-async function writeCurriculumJson() {
-  try {
-    const data = normalizeCurriculumData(getCurriculum());
-    // Write locally (works on dev, silently fails on Vercel read-only fs — that's OK)
-    try { fs.writeFileSync(CURRICULUM_JSON, JSON.stringify(data, null, 2), 'utf8'); } catch {}
-    // Push to GitHub synchronously — must complete before serverless function terminates
-    await syncToGitHub(data);
-  } catch (e) { console.error('[writeCurriculumJson]', e.message); }
 }
 
 // ─── USER ROUTES ───────────────────────────────────────────────────────
@@ -405,7 +287,6 @@ app.get('/api/me', (req, res) => {
   if (!telegram_id) return res.status(400).json({ error: 'missing' });
   let user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegram_id);
   if (!user) {
-    // Auto-register new Telegram user with free plan
     const tg_name     = req.headers['x-telegram-name']     || null;
     const tg_username = req.headers['x-telegram-username'] || null;
     db.prepare('INSERT OR IGNORE INTO users (telegram_id,name,username,plan) VALUES (?,?,?,?)')
@@ -433,7 +314,6 @@ app.post('/api/progress', (req, res) => {
   if (!telegram_id || progress === undefined) return res.status(400).json({ error: 'bad_request' });
   const pct = Math.min(100, Math.max(0, Number(progress)));
   if (completedLessons) {
-    // Merge with existing completed_lessons (union — never remove a completed lesson)
     const existing = db.prepare('SELECT completed_lessons FROM users WHERE telegram_id=?').get(telegram_id);
     let merged = {};
     try { merged = JSON.parse(existing?.completed_lessons || '{}'); } catch {}
@@ -447,8 +327,9 @@ app.post('/api/progress', (req, res) => {
 });
 
 // ─── CURRICULUM READ ───────────────────────────────────────────────────
-app.get('/api/curriculum', (req, res) => {
-  res.json(getCurriculum());
+app.get('/api/curriculum', async (req, res) => {
+  await initCurriculum();
+  res.json(curriculumData);
 });
 
 // ─── QUIZ RESULT ───────────────────────────────────────────────────────
@@ -464,7 +345,7 @@ const ADMIN_PASSWORD = 'refaroman2003';
 
 app.post('/api/admin/login', (req, res) => {
   const { phone = '', password = '' } = req.body;
-  const adminPhone     = process.env.ADMIN_PHONE || '0535266628';
+  const adminPhone      = process.env.ADMIN_PHONE || '0535266628';
   const normalizedInput = normalizePhone(phone);
   const normalizedAdmin = normalizePhone(adminPhone);
   if (password !== ADMIN_PASSWORD) return res.status(401).json({ error: 'unauthorized' });
@@ -472,7 +353,6 @@ app.post('/api/admin/login', (req, res) => {
   res.json({ ok: true });
 });
 
-// PUT /api/admin/users/:telegram_id — edit plan
 app.put('/api/admin/users/:telegram_id', (req, res) => {
   const { plan } = req.body;
   if (!plan) return res.status(400).json({ error: 'plan required' });
@@ -491,134 +371,151 @@ app.get('/api/admin/stats', (req, res) => {
   res.json({ totalUsers, totalPurchases, bySolo, byClass, byMentor, recentUsers });
 });
 
-// ─── ADMIN CURRICULUM CRUD ─────────────────────────────────────────────
+// ─── ADMIN CURRICULUM CRUD (in-memory + GitHub) ────────────────────────
 
-// Courses
-app.get('/api/admin/courses', (req, res) => res.json(getCurriculum()));
+// GET: return current curriculum
+app.get('/api/admin/courses', async (req, res) => {
+  await initCurriculum();
+  res.json(curriculumData);
+});
 
+// ── COURSES ──────────────────────────────────────────────
 app.post('/api/admin/courses', async (req, res) => {
+  await initCurriculum();
   const { id, name, emoji='📚', color='ct-blue', meta='' } = req.body;
   if (!id || !name) return res.status(400).json({ error: 'id and name required' });
-  const n = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
-  db.prepare('INSERT INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)').run(id,name,emoji,color,meta,n);
-  await writeCurriculumJson();
+  if (findCourse(id)) return res.status(400).json({ error: 'id already exists' });
+  curriculumData.push({ id, name, emoji, color, meta, sort_order: curriculumData.length, chapters: [] });
+  await saveCurriculum();
   res.json({ ok: true });
 });
 
 app.put('/api/admin/courses/:id', async (req, res) => {
+  await initCurriculum();
+  const course = findCourse(req.params.id);
+  if (!course) return res.status(404).json({ error: 'not found' });
   const { name, emoji, color, meta, sort_order } = req.body;
-  db.prepare('UPDATE courses SET name=COALESCE(?,name), emoji=COALESCE(?,emoji), color=COALESCE(?,color), meta=COALESCE(?,meta), sort_order=COALESCE(?,sort_order) WHERE id=?')
-    .run(name||null, emoji||null, color||null, meta||null, sort_order??null, req.params.id);
-  await writeCurriculumJson();
+  if (name       !== undefined) course.name       = name;
+  if (emoji      !== undefined) course.emoji      = emoji;
+  if (color      !== undefined) course.color      = color;
+  if (meta       !== undefined) course.meta       = meta;
+  if (sort_order !== undefined) course.sort_order = sort_order;
+  await saveCurriculum();
   res.json({ ok: true });
 });
 
 app.delete('/api/admin/courses/:id', async (req, res) => {
-  const cid = req.params.id;
-  const chapters = db.prepare('SELECT id FROM chapters WHERE course_id=?').all(cid);
-  for (const ch of chapters) {
-    db.prepare('DELETE FROM lessons WHERE chapter_id=?').run(ch.id);
-    db.prepare('DELETE FROM quizzes WHERE chapter_id=?').run(ch.id);
-  }
-  db.prepare('DELETE FROM chapters WHERE course_id=?').run(cid);
-  db.prepare('DELETE FROM courses WHERE id=?').run(cid);
-  await writeCurriculumJson();
+  await initCurriculum();
+  const idx = curriculumData.findIndex(c => c.id === req.params.id);
+  if (idx >= 0) curriculumData.splice(idx, 1);
+  await saveCurriculum();
   res.json({ ok: true });
 });
 
-// Chapters
+// ── CHAPTERS ─────────────────────────────────────────────
 app.post('/api/admin/chapters', async (req, res) => {
+  await initCurriculum();
   const { id, course_id, title } = req.body;
   if (!id || !course_id || !title) return res.status(400).json({ error: 'missing fields' });
-  const n = db.prepare('SELECT COUNT(*) as n FROM chapters WHERE course_id=?').get(course_id).n;
-  db.prepare('INSERT INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)').run(id,course_id,title,n);
-  await writeCurriculumJson();
+  const course = findCourse(course_id);
+  if (!course) return res.status(404).json({ error: 'course not found' });
+  course.chapters.push({ id, course_id, title, sort_order: course.chapters.length, quiz: null, lessons: [] });
+  await saveCurriculum();
   res.json({ ok: true });
 });
 
 app.put('/api/admin/chapters/:id', async (req, res) => {
+  await initCurriculum();
+  const ch = findChapter(req.params.id);
+  if (!ch) return res.status(404).json({ error: 'not found' });
   const { title, sort_order } = req.body;
-  db.prepare('UPDATE chapters SET title=COALESCE(?,title), sort_order=COALESCE(?,sort_order) WHERE id=?').run(title||null, sort_order??null, req.params.id);
-  await writeCurriculumJson();
+  if (title      !== undefined) ch.title      = title;
+  if (sort_order !== undefined) ch.sort_order = sort_order;
+  await saveCurriculum();
   res.json({ ok: true });
 });
 
 app.delete('/api/admin/chapters/:id', async (req, res) => {
-  const cid = req.params.id;
-  db.prepare('DELETE FROM lessons WHERE chapter_id=?').run(cid);
-  db.prepare('DELETE FROM quizzes WHERE chapter_id=?').run(cid);
-  db.prepare('DELETE FROM chapters WHERE id=?').run(cid);
-  await writeCurriculumJson();
+  await initCurriculum();
+  for (const course of curriculumData) {
+    const idx = course.chapters.findIndex(ch => ch.id === req.params.id);
+    if (idx >= 0) { course.chapters.splice(idx, 1); break; }
+  }
+  await saveCurriculum();
   res.json({ ok: true });
 });
 
-// Lessons
+// ── LESSONS ──────────────────────────────────────────────
 app.post('/api/admin/lessons', async (req, res) => {
+  await initCurriculum();
   const { id, chapter_id, title, description='', video_url='', tags=[], exercises=[], homework=[] } = req.body;
   if (!id || !chapter_id || !title) return res.status(400).json({ error: 'missing fields' });
-  const n = db.prepare('SELECT COUNT(*) as n FROM lessons WHERE chapter_id=?').get(chapter_id).n;
-  db.prepare('INSERT INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
-    .run(id,chapter_id,title,description,video_url,JSON.stringify(tags),JSON.stringify(exercises),JSON.stringify(homework),n);
-  await writeCurriculumJson();
+  const ch = findChapter(chapter_id);
+  if (!ch) return res.status(404).json({ error: 'chapter not found' });
+  ch.lessons.push({ id, chapter_id, title, description, video_url, tags, exercises, homework, sort_order: ch.lessons.length });
+  await saveCurriculum();
   res.json({ ok: true });
 });
 
 app.put('/api/admin/lessons/:id', async (req, res) => {
+  await initCurriculum();
+  const ls = findLesson(req.params.id);
+  if (!ls) return res.status(404).json({ error: 'not found' });
   const { title, description, video_url, tags, exercises, homework, sort_order } = req.body;
-  db.prepare(`UPDATE lessons SET
-    title=COALESCE(?,title), description=COALESCE(?,description),
-    video_url=COALESCE(?,video_url), tags=COALESCE(?,tags),
-    exercises=COALESCE(?,exercises), homework=COALESCE(?,homework),
-    sort_order=COALESCE(?,sort_order) WHERE id=?`)
-    .run(
-      title||null, description||null, video_url!==undefined?video_url:null,
-      tags?JSON.stringify(tags):null,
-      exercises?JSON.stringify(exercises):null,
-      homework?JSON.stringify(homework):null,
-      sort_order??null, req.params.id
-    );
-  await writeCurriculumJson();
+  if (title       !== undefined) ls.title       = title;
+  if (description !== undefined) ls.description = description;
+  if (video_url   !== undefined) ls.video_url   = video_url;
+  if (tags        !== undefined) ls.tags        = tags;
+  if (exercises   !== undefined) ls.exercises   = exercises;
+  if (homework    !== undefined) ls.homework    = homework;
+  if (sort_order  !== undefined) ls.sort_order  = sort_order;
+  await saveCurriculum();
   res.json({ ok: true });
 });
 
 app.delete('/api/admin/lessons/:id', async (req, res) => {
-  db.prepare('DELETE FROM lessons WHERE id=?').run(req.params.id);
-  await writeCurriculumJson();
-  res.json({ ok: true });
-});
-
-// Quizzes
-app.put('/api/admin/quizzes/:chapter_id', async (req, res) => {
-  const { title, questions } = req.body;
-  const existing = db.prepare('SELECT id FROM quizzes WHERE chapter_id=?').get(req.params.chapter_id);
-  if (existing) {
-    db.prepare('UPDATE quizzes SET title=COALESCE(?,title), questions=COALESCE(?,questions) WHERE chapter_id=?')
-      .run(title||null, questions?JSON.stringify(questions):null, req.params.chapter_id);
-  } else {
-    const id = 'qz_' + Date.now();
-    db.prepare('INSERT INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)').run(id, req.params.chapter_id, title||'מבחן מסכם', JSON.stringify(questions||[]));
+  await initCurriculum();
+  for (const course of curriculumData) {
+    for (const ch of course.chapters) {
+      const idx = ch.lessons.findIndex(l => l.id === req.params.id);
+      if (idx >= 0) { ch.lessons.splice(idx, 1); break; }
+    }
   }
-  await writeCurriculumJson();
+  await saveCurriculum();
   res.json({ ok: true });
 });
 
-// ─── ADMIN EXPORT ─────────────────────────────────────────────────────
-app.get('/api/admin/export-curriculum', (req, res) => {
-  const data = normalizeCurriculumData(getCurriculum());
-  res.setHeader('Content-Disposition', 'attachment; filename="curriculum.json"');
-  res.json(data);
+// ── QUIZZES ──────────────────────────────────────────────
+app.put('/api/admin/quizzes/:chapter_id', async (req, res) => {
+  await initCurriculum();
+  const ch = findChapter(req.params.chapter_id);
+  if (!ch) return res.status(404).json({ error: 'chapter not found' });
+  if (!ch.quiz) {
+    ch.quiz = { id: 'qz_' + Date.now(), chapter_id: req.params.chapter_id, title: 'מבחן מסכם', questions: [] };
+  }
+  const { title, questions } = req.body;
+  if (title     !== undefined) ch.quiz.title     = title;
+  if (questions !== undefined) ch.quiz.questions = questions;
+  await saveCurriculum();
+  res.json({ ok: true });
 });
 
-// ─── SEED (dev only) ─────────────────────────────────────────────────
+// ─── ADMIN EXPORT ──────────────────────────────────────────────────────
+app.get('/api/admin/export-curriculum', async (req, res) => {
+  await initCurriculum();
+  res.setHeader('Content-Disposition', 'attachment; filename="curriculum.json"');
+  res.json(curriculumData);
+});
+
+// ─── DEV SEED ─────────────────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'production') {
   const ins = db.prepare('INSERT OR IGNORE INTO purchases (email,phone,plan,grow_transaction_id) VALUES (?,?,?,?)');
-  ins.run('test@test.com', null,         'כיתה',  'dev_1');
-  ins.run(null, '0501234567',            'מנטור', 'dev_2');
-  ins.run('student@edu.com', null,       'סולו',  'dev_3');
+  ins.run('test@test.com', null,       'כיתה',  'dev_1');
+  ins.run(null, '0501234567',          'מנטור', 'dev_2');
+  ins.run('student@edu.com', null,     'סולו',  'dev_3');
 }
 
-// ─── PERMANENT USERS ─────────────────────────────────────────────────
-// Always ensure these users exist (runs on every startup)
+// ─── PERMANENT USERS ──────────────────────────────────────────────────
 ;(() => {
   const ins = db.prepare('INSERT OR IGNORE INTO purchases (email,phone,plan,grow_transaction_id) VALUES (?,?,?,?)');
   ins.run(null,          '123',        'סולו',  'permanent_123');

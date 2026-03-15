@@ -664,6 +664,19 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
 }
 .video-fullscreen-btn:active { background: rgba(0,0,0,.9); }
 
+/* Fullscreen: video fills the screen on all browsers */
+video:fullscreen, video:-webkit-full-screen, video:-moz-full-screen {
+  width: 100vw !important; height: 100vh !important;
+  max-height: 100vh !important; object-fit: contain; background: #000;
+}
+.video-wrap:fullscreen, .video-wrap:-webkit-full-screen, .video-wrap:-moz-full-screen {
+  background: #000; display: flex; align-items: center; justify-content: center;
+}
+.video-wrap:fullscreen video, .video-wrap:-webkit-full-screen video, .video-wrap:-moz-full-screen video {
+  width: 100% !important; height: 100% !important;
+  max-height: 100vh !important; object-fit: contain;
+}
+
 /* Toast */
 .toast {
   position: fixed; bottom: 24px; right: 50%; transform: translateX(50%);
@@ -2112,21 +2125,27 @@ function toggleFullscreen(btn) {
   // Exit fullscreen
   const fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
   if (fsEl) {
-    const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen;
-    if (exit) exit.call(document);
+    (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen)?.call(document);
     return;
   }
   const video = btn instanceof HTMLButtonElement
     ? btn.closest('.video-wrap')?.querySelector('video')
     : document.getElementById('lesson-video');
   if (!video) return;
+  // Try video element directly — best native fullscreen on desktop
+  const tryFs = (el, method) => {
+    if (!el[method]) return false;
+    try { el[method](); return true; } catch { return false; }
+  };
+  if (tryFs(video, 'requestFullscreen'))       return;
+  if (tryFs(video, 'webkitRequestFullscreen')) return;
+  if (tryFs(video, 'mozRequestFullScreen'))    return;
+  // iOS Safari: must use webkitEnterFullscreen on the video element
+  if (tryFs(video, 'webkitEnterFullscreen'))   return;
+  // Last resort: fullscreen the container div
   const wrap = video.closest('.video-wrap') || video;
-  // Desktop: container fullscreen
-  if (wrap.requestFullscreen)       { wrap.requestFullscreen();       return; }
-  if (wrap.webkitRequestFullscreen) { wrap.webkitRequestFullscreen(); return; }
-  if (wrap.mozRequestFullScreen)    { wrap.mozRequestFullScreen();    return; }
-  // iOS fallback (must be on the video element itself)
-  if (video.webkitEnterFullscreen)  { video.webkitEnterFullscreen();  return; }
+  if (tryFs(wrap, 'requestFullscreen'))        return;
+  if (tryFs(wrap, 'webkitRequestFullscreen'))  return;
 }
 
 // ── VIDEO URL FIX ────────────────────────────────────────
