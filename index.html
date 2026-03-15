@@ -158,7 +158,7 @@ body {
 }
 .hero-inner      { position: relative; z-index: 1; }
 .hero-greeting   { font-size: 16px; opacity: .75; margin-bottom: 3px; }
-.hero-name       { font-size: 30px; font-weight: 800; margin-bottom: 12px; line-height: 1.1; }
+.hero-name       { font-size: 28px; font-weight: 800; margin-bottom: 12px; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .plan-badge {
   display: inline-flex; align-items: center; gap: 6px;
   background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3);
@@ -543,49 +543,60 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
   margin-top: 16px;
   background: rgba(0,0,0,.35);
   border-radius: 16px;
-  padding: 12px 14px 14px;
+  padding: 12px 14px 12px;
   border: 1px solid rgba(255,255,255,.13);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
-.minimap-hdr {
+.minimap-top {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 10px; gap: 10px;
 }
+.minimap-top-left { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .mmt-title {
-  font-size: 12px; font-weight: 700; letter-spacing: .08em;
-  text-transform: uppercase; color: rgba(140,210,255,.9);
+  font-size: 11px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: rgba(140,210,255,.8);
 }
-.mmt-map-btn {
-  font-size: 12px; font-weight: 700; color: rgba(120,200,255,.65);
-  background: none; border: none; cursor: pointer; padding: 0;
+.mmt-prog-txt {
+  font-size: 12px; color: rgba(255,255,255,.55);
 }
+.mmt-continue-btn {
+  flex-shrink: 0;
+  background: #22C55E; color: #fff;
+  border: none; border-radius: 22px;
+  padding: 9px 18px; font-size: 15px; font-weight: 800;
+  cursor: pointer; font-family: 'Rubik', sans-serif;
+  box-shadow: 0 2px 12px rgba(34,197,94,.5);
+  white-space: nowrap;
+}
+.mmt-continue-btn:active { transform: scale(.95); }
 .minimap-scroll-outer {
   overflow-x: auto; overflow-y: visible;
   scrollbar-width: none;
   direction: ltr;
 }
 .minimap-scroll-outer::-webkit-scrollbar { display: none; }
+.mmd-prog-bar {
+  height: 4px; background: rgba(255,255,255,.13);
+  border-radius: 2px; overflow: hidden; margin-top: 8px;
+}
+.mmd-prog-fill {
+  height: 100%; background: rgba(74,222,128,.8); border-radius: 2px;
+  transition: width .5s;
+}
 
 /* The flat track row */
 .mmd-row {
   display: flex; align-items: center; gap: 6px;
   padding: 4px 2px 2px; direction: ltr;
 }
-.mmd-ch-chip {
-  font-size: 10px; font-weight: 700; color: rgba(140,210,255,.9);
-  white-space: nowrap; font-family: 'Rubik',sans-serif;
-  background: rgba(37,99,235,.35); border: 1px solid rgba(93,163,255,.35);
-  border-radius: 7px; padding: 3px 7px;
-  flex-shrink: 0; line-height: 1;
-}
 .mmd-line {
-  flex: 0 0 14px; height: 2px;
+  flex: 0 0 10px; height: 2px;
   background: rgba(255,255,255,.14); border-radius: 1px;
 }
 .mmd-line.done { background: rgba(74,222,128,.55); }
 .mmd-dot {
-  width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+  width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0;
   border: 2px solid rgba(255,255,255,.22);
   background: rgba(255,255,255,.07);
 }
@@ -593,32 +604,17 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
   background: rgba(22,163,74,.9); border-color: rgba(74,222,128,.75);
 }
 .mmd-dot.current {
-  width: 22px; height: 22px;
-  background: #2563EB; border-color: #93C5FD;
-  box-shadow: 0 0 0 5px rgba(37,99,235,.4);
-  cursor: pointer;
+  width: 18px; height: 18px;
+  background: #fff; border-color: #93C5FD;
+  box-shadow: 0 0 0 4px rgba(255,255,255,.25);
 }
 .mmd-dot.quiz {
   border-radius: 3px; transform: rotate(45deg);
-  width: 11px; height: 11px; margin: 0 2px;
+  width: 10px; height: 10px; margin: 0 2px;
   background: rgba(217,119,6,.85); border-color: rgba(245,158,11,.7);
 }
 .mmd-dot.quiz.done {
   background: rgba(22,163,74,.9); border-color: rgba(74,222,128,.75);
-}
-/* Progress footer */
-.mmd-footer { margin-top: 10px; }
-.mmd-prog-bar {
-  height: 4px; background: rgba(255,255,255,.13);
-  border-radius: 2px; overflow: hidden; margin-bottom: 5px;
-}
-.mmd-prog-fill {
-  height: 100%; background: rgba(74,222,128,.8); border-radius: 2px;
-  transition: width .5s;
-}
-.mmd-prog-txt {
-  font-size: 12px; color: rgba(255,255,255,.5);
-  font-family: 'Rubik',sans-serif; direction: rtl; display: block;
 }
 
 /* ══════════════════════════════════════════
@@ -738,11 +734,15 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
       <div class="plan-badge" id="plan-badge">⭐ —</div>
       <!-- Minimap — pill inside hero -->
       <div class="minimap-wrap" id="minimap-wrap">
-        <div class="minimap-hdr">
-          <span class="mmt-title">📍 מפת התקדמות</span>
-          <button class="mmt-map-btn" onclick="navTo('progress')">תצוגה מלאה ←</button>
+        <div class="minimap-top">
+          <div class="minimap-top-left">
+            <span class="mmt-title">📍 התקדמות</span>
+            <span class="mmt-prog-txt" id="mmt-prog-txt">טוען…</span>
+          </div>
+          <button class="mmt-continue-btn" id="mmt-continue-btn" onclick="goContinue()">▶ המשך</button>
         </div>
         <div class="minimap-scroll-outer" id="minimap-scroll-outer"></div>
+        <div class="mmd-prog-bar"><div class="mmd-prog-fill" id="mmd-prog-fill" style="width:0%"></div></div>
       </div>
     </div>
   </div>
@@ -1246,28 +1246,20 @@ function renderMinimap() {
     }
   }
 
-  // Build flat row: [chapter chip] [dot] [dot] … [quiz] | [chapter chip] …
+  // Build flat row — dots only, no chapter chips
   const parts = [];
   course.chapters.forEach((ch, ci) => {
-    // Chapter separator line between chapters
     if (ci > 0) parts.push(`<div class="mmd-line${
-      ch.lessons.some(ls => completedLessons[ls.id]) ? ' done' : ''
+      ch.lessons.every(ls => completedLessons[ls.id]) ? ' done' : ''
     }"></div>`);
 
-    // Chapter name chip
-    const shortName = ch.title.length > 9 ? ch.title.substring(0, 8) + '…' : ch.title;
-    parts.push(`<div class="mmd-ch-chip">${shortName}</div>`);
-
-    // Lesson dots
     ch.lessons.forEach(ls => {
-      const done   = !!completedLessons[ls.id];
-      const isCur  = ls === currentLesson;
-      const cls    = done ? 'done' : isCur ? 'current' : 'todo';
-      const click  = isCur ? ' onclick="goContinue()"' : '';
-      parts.push(`<div class="mmd-dot ${cls}"${click} title="${ls.title}"></div>`);
+      const done  = !!completedLessons[ls.id];
+      const isCur = ls === currentLesson;
+      const cls   = done ? 'done' : isCur ? 'current' : 'todo';
+      parts.push(`<div class="mmd-dot ${cls}" title="${ls.title}"></div>`);
     });
 
-    // Quiz diamond
     if (ch.quiz) {
       const qDone = !!completedQuizzes[ch.id];
       parts.push(`<div class="mmd-dot quiz${qDone ? ' done' : ''}" title="מבחן פרק"></div>`);
@@ -1275,15 +1267,18 @@ function renderMinimap() {
   });
 
   const pct = totalLessons ? Math.round(doneLessons / totalLessons * 100) : 0;
+  const allDone = doneLessons === totalLessons && totalLessons > 0;
 
-  outer.innerHTML = `
-    <div class="mmd-row">${parts.join('')}</div>
-    <div class="mmd-footer">
-      <div class="mmd-prog-bar"><div class="mmd-prog-fill" style="width:${pct}%"></div></div>
-      <span class="mmd-prog-txt">${doneLessons} / ${totalLessons} שיעורים הושלמו · ${pct}% · לחץ על ● הכחול להמשיך</span>
-    </div>`;
+  // Update progress text + button
+  const progTxt = document.getElementById('mmt-prog-txt');
+  if (progTxt) progTxt.textContent = `${doneLessons} / ${totalLessons} שיעורים · ${pct}%`;
+  const btn = document.getElementById('mmt-continue-btn');
+  if (btn) { btn.textContent = allDone ? '✓ סיימת!' : '▶ המשך'; btn.disabled = allDone; }
+  const fill = document.getElementById('mmd-prog-fill');
+  if (fill) fill.style.width = pct + '%';
 
-  // Scroll so the current dot is visible
+  outer.innerHTML = `<div class="mmd-row">${parts.join('')}</div>`;
+
   setTimeout(() => {
     const cur = outer.querySelector('.mmd-dot.current');
     if (cur) cur.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
