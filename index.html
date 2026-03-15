@@ -1,0 +1,2106 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>מתמטיקה עם רפאל</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════
+   TOKENS
+══════════════════════════════════════════ */
+:root {
+  --accent:       #2563EB;
+  --accent-dark:  #1D4ED8;
+  --accent-light: #EFF6FF;
+  --accent-mid:   #BFDBFE;
+  --green:        #16A34A;
+  --green-light:  #DCFCE7;
+  --red:          #DC2626;
+  --red-light:    #FEE2E2;
+  --amber:        #D97706;
+  --amber-light:  #FEF3C7;
+  --purple:       #7C3AED;
+  --purple-light: #F5F3FF;
+  --text-1: #0F172A;
+  --text-2: #334155;
+  --text-3: #64748B;
+  --border: #E2E8F0;
+  --bg:     #F1F5F9;
+  --white:  #ffffff;
+  --r:    16px;
+  --r-sm: 10px;
+  --r-full: 999px;
+  --sh:    0 2px 12px rgba(0,0,0,.07);
+  --sh-md: 0 4px 24px rgba(0,0,0,.10);
+}
+
+/* ── ANTI-COPY ── */
+* {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+input, textarea { -webkit-user-select: text; user-select: text; }
+
+body {
+  font-family: 'Rubik', sans-serif;
+  font-size: 16px;
+  background: var(--bg);
+  color: var(--text-1);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+  text-align: right;
+  direction: rtl;
+}
+
+/* ── LAYOUT ── */
+.page-wrap { max-width: 600px; margin: 0 auto; background: var(--bg); min-height: 100vh; }
+.screen { display: none; }
+.screen.active { display: block; }
+.hidden { display: none !important; }
+
+/* ── phone-only layout, no desktop breakpoints ── */
+
+/* ── COMMON ── */
+.btn {
+  width: 100%; padding: 15px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: var(--r); cursor: pointer;
+  font-family: 'Rubik', sans-serif; font-size: 16px; font-weight: 700;
+  transition: opacity .2s, transform .1s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn:active { opacity: .85; transform: scale(.98); }
+.btn:disabled { opacity: .4; pointer-events: none; }
+.btn-green   { background: var(--green); }
+.btn-red     { background: var(--red); }
+.btn-outline { background: none; color: var(--accent); border: 2px solid var(--accent-mid); }
+.btn-sm      { width: auto; padding: 9px 18px; font-size: 14px; border-radius: var(--r-sm); }
+
+.spinner {
+  width: 22px; height: 22px;
+  border: 3px solid rgba(37,99,235,.25);
+  border-top-color: var(--accent);
+  border-radius: 50%; animation: spin .7s linear infinite;
+  margin: 8px auto; display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.top-nav {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--white); border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.nav-back {
+  width: 36px; height: 36px; min-width: 36px;
+  background: var(--bg); border: none; cursor: pointer;
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: var(--text-1);
+}
+.nav-title { font-size: 16px; font-weight: 700; flex: 1; }
+
+.section { padding: 20px 16px 0; }
+.section-title {
+  font-size: 14px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase;
+  color: var(--text-3); margin-bottom: 12px;
+}
+.divider { height: 1px; background: var(--border); margin: 20px 16px 0; }
+
+/* ══════════════════════════════════════════
+   AUTH
+══════════════════════════════════════════ */
+#screen-auth {
+  min-height: 100vh; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  padding: 32px 24px; background: var(--white);
+}
+#screen-auth.active { display: flex; }
+.auth-logo {
+  width: 80px; height: 80px; border: 3px solid var(--accent); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; font-weight: 900; color: var(--accent); margin-bottom: 20px;
+}
+.auth-title { font-size: 24px; font-weight: 800; margin-bottom: 6px; text-align: center; }
+.auth-sub   { font-size: 14px; color: var(--text-3); text-align: center; margin-bottom: 32px; line-height: 1.7; }
+.auth-input {
+  width: 100%; padding: 15px 16px;
+  border: 2px solid var(--border); border-radius: var(--r);
+  font-family: 'Rubik', sans-serif; font-size: 16px;
+  background: var(--bg); color: var(--text-1);
+  direction: ltr; text-align: center;
+  transition: border-color .2s; margin-bottom: 12px;
+  -webkit-user-select: text; user-select: text;
+}
+.auth-input:focus { outline: none; border-color: var(--accent); }
+.auth-error { font-size: 13px; color: var(--red); text-align: center; margin-bottom: 10px; display: none; }
+#admin-pass-wrap.visible { max-height: 80px !important; opacity: 1 !important; pointer-events: auto !important; }
+
+/* ══════════════════════════════════════════
+   HOME
+══════════════════════════════════════════ */
+.hero {
+  background: linear-gradient(135deg, #1E40AF 0%, #2563EB 55%, #3B82F6 100%);
+  padding: 28px 20px 32px; color: #fff; position: relative; overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; top: -60px; left: -40px;
+  width: 200px; height: 200px; background: rgba(255,255,255,.06); border-radius: 50%;
+}
+.hero::after {
+  content: ''; position: absolute; bottom: -30px; right: -20px;
+  width: 120px; height: 120px; background: rgba(255,255,255,.05); border-radius: 50%;
+}
+.hero-inner      { position: relative; z-index: 1; }
+.hero-greeting   { font-size: 16px; opacity: .75; margin-bottom: 3px; }
+.hero-name       { font-size: 30px; font-weight: 800; margin-bottom: 12px; line-height: 1.1; }
+.plan-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3);
+  border-radius: var(--r-full); padding: 5px 14px; font-size: 14px; font-weight: 600;
+}
+/* Course cards */
+.courses { display: flex; flex-direction: column; gap: 10px; }
+.course-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--r); display: flex; align-items: stretch;
+  box-shadow: var(--sh); overflow: hidden; cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+}
+.course-card:active { transform: scale(.98); box-shadow: none; }
+.course-card.locked { opacity: .6; cursor: default; }
+.course-card.locked:active { transform: none; }
+.course-thumb {
+  width: 90px; min-width: 90px; display: flex; align-items: center;
+  justify-content: center; font-size: 32px; flex-shrink: 0;
+}
+.ct-blue   { background: linear-gradient(135deg,#DBEAFE,#BFDBFE); }
+.ct-green  { background: linear-gradient(135deg,#DCFCE7,#BBF7D0); }
+.ct-amber  { background: linear-gradient(135deg,#FEF3C7,#FDE68A); }
+.ct-purple { background: linear-gradient(135deg,#F5F3FF,#DDD6FE); }
+.course-body { flex:1; padding: 14px 14px 14px 10px; display: flex; align-items: center; gap: 8px; }
+.course-info { flex: 1; min-width: 0; }
+.course-name { font-size: 16px; font-weight: 700; margin-bottom: 3px; }
+.course-meta { font-size: 13px; color: var(--text-3); }
+.course-prog { margin-top: 6px; }
+.prog-bar-bg   { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.prog-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .4s; }
+.prog-label    { font-size: 12px; color: var(--text-3); margin-top: 3px; }
+.course-badge  { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: var(--r-full); flex-shrink: 0; }
+.badge-open   { background: var(--green-light); color: var(--green); }
+.badge-locked { background: var(--red-light);   color: var(--red); }
+
+/* Quick actions */
+.qa-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.qa-tile {
+  background: var(--white); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 14px 8px 12px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px;
+  box-shadow: var(--sh); cursor: pointer;
+  transition: transform .15s, box-shadow .15s; aspect-ratio: 1;
+}
+.qa-tile:active { transform: scale(.93); box-shadow: none; }
+.qa-tile-icon  { width: 48px; height: 48px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.qa-tile-label { font-size: 14px; font-weight: 700; color: var(--text-1); text-align: center; line-height: 1.3; }
+
+/* Upgrade / Support */
+.upgrade-banner {
+  margin: 20px 16px 0;
+  background: linear-gradient(135deg,#1E40AF,#2563EB);
+  border-radius: var(--r); padding: 16px; color: #fff;
+  display: flex; align-items: center; gap: 14px; cursor: pointer;
+  box-shadow: 0 4px 20px rgba(37,99,235,.3);
+}
+.upgrade-banner:active { opacity: .9; }
+.upgrade-emoji { font-size: 30px; flex-shrink: 0; }
+.upgrade-text  { font-size: 14px; font-weight: 500; line-height: 1.6; }
+.upgrade-text strong { font-size: 17px; font-weight: 800; display: block; margin-bottom: 2px; }
+.support-card {
+  background: var(--white); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 16px; display: flex; align-items: center; gap: 12px;
+  box-shadow: var(--sh); cursor: pointer; transition: transform .15s;
+}
+.support-card:active { transform: scale(.98); }
+.support-icon { width: 46px; height: 46px; min-width: 46px; background: var(--accent-light); border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+
+/* ══════════════════════════════════════════
+   LESSONS SCREEN
+══════════════════════════════════════════ */
+.course-hero { padding: 24px 16px 20px; background: var(--white); border-bottom: 1px solid var(--border); }
+.course-hero-thumb { width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 30px; margin-bottom: 12px; }
+.course-hero-name { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.course-hero-meta { font-size: 13px; color: var(--text-3); margin-bottom: 14px; }
+.course-bar-bg   { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.course-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+
+.chapters-list { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.chapter-block { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; box-shadow: var(--sh); }
+.chapter-header { padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.chapter-num { width: 32px; height: 32px; min-width: 32px; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+.chapter-title { flex: 1; font-size: 16px; font-weight: 700; }
+.chapter-count { font-size: 13px; color: var(--text-3); }
+.chapter-chevron { font-size: 12px; color: var(--text-3); transition: transform .2s; }
+.chapter-block.open .chapter-chevron { transform: rotate(180deg); }
+.lessons-list { display: none; border-top: 1px solid var(--border); }
+.chapter-block.open .lessons-list { display: block; }
+
+.lesson-row { padding: 12px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .1s; }
+.lesson-row:last-child { border-bottom: none; }
+.lesson-row:active { background: var(--bg); }
+.lesson-row.completed .lesson-title { color: var(--text-3); }
+.lesson-status { width: 28px; height: 28px; min-width: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.ls-done    { background: var(--green-light); color: var(--green); }
+.ls-current { background: var(--accent); color: #fff; }
+.ls-todo    { background: var(--bg); border: 2px solid var(--border); color: var(--text-3); font-size: 11px; font-weight: 700; }
+.lesson-body { flex: 1; min-width: 0; }
+.lesson-title { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+.lesson-tags  { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+.lesson-tag   { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: var(--r-full); background: var(--bg); color: var(--text-3); border: 1px solid var(--border); }
+
+/* Quiz row at bottom of chapter */
+.quiz-row {
+  padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+  background: var(--accent-light); cursor: pointer; transition: background .1s;
+  border-top: 2px solid var(--accent-mid);
+}
+.quiz-row:active { background: var(--accent-mid); }
+.quiz-row.locked { opacity: .45; cursor: default; pointer-events: none; }
+.quiz-row-icon { width: 28px; height: 28px; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.quiz-row-text { font-size: 14px; font-weight: 700; color: var(--accent); }
+.quiz-row-sub  { font-size: 11px; color: var(--text-3); }
+
+/* ══════════════════════════════════════════
+   LESSON DETAIL — STEP FLOW
+══════════════════════════════════════════ */
+.step-tabs {
+  display: flex; background: var(--white); border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+.step-tab {
+  flex: 1; min-width: 80px; padding: 13px 8px; text-align: center;
+  font-size: 13px; font-weight: 700; color: var(--text-3);
+  border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap;
+  transition: color .2s;
+}
+.step-tab.active  { color: var(--accent); border-bottom-color: var(--accent); }
+.step-tab.locked  { opacity: .35; pointer-events: none; }
+
+.step-panel { display: none; padding: 20px 16px; }
+.step-panel.active { display: block; }
+
+/* Video player */
+.video-wrap {
+  background: #000; border-radius: var(--r); overflow: hidden;
+  position: relative; aspect-ratio: 16/9; margin-bottom: 16px;
+}
+.video-wrap video {
+  width: 100%; height: 100%; display: block;
+  pointer-events: auto;
+}
+.video-placeholder {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 8px; color: var(--text-3);
+  background: var(--bg); border-radius: var(--r); aspect-ratio: 16/9;
+  border: 2px dashed var(--border); margin-bottom: 16px;
+}
+.video-placeholder-icon { font-size: 36px; opacity: .4; }
+.video-placeholder-text { font-size: 14px; }
+
+.content-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 12px; box-shadow: var(--sh); }
+.content-card-title { font-size: 13px; font-weight: 700; color: var(--text-3); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 12px; }
+.content-card p { font-size: 16px; line-height: 1.75; color: var(--text-2); }
+
+.exercise-item { padding: 11px 0; border-bottom: 1px solid var(--border); }
+.exercise-item:last-child { border-bottom: none; }
+.exercise-q { font-size: 15px; font-weight: 600; line-height: 1.6; direction: rtl; }
+
+.hw-item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.hw-item:last-child { border-bottom: none; }
+.hw-num { width: 22px; height: 22px; min-width: 22px; background: var(--accent-light); color: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; margin-top: 2px; }
+.hw-text { font-size: 15px; line-height: 1.7; }
+
+.step-nav-btn {
+  width: 100%; padding: 14px; background: var(--accent); color: #fff;
+  border: none; border-radius: var(--r); font-family: 'Rubik', sans-serif;
+  font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 16px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: opacity .2s;
+}
+.step-nav-btn:active { opacity: .85; }
+.step-nav-btn.green { background: var(--green); }
+.step-nav-btn.done  { background: var(--text-3); cursor: default; }
+
+.video-progress-note {
+  background: var(--amber-light); border: 1px solid #FDE68A; border-radius: var(--r-sm);
+  padding: 10px 14px; font-size: 13px; color: var(--amber); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* ══════════════════════════════════════════
+   QUIZ SCREEN
+══════════════════════════════════════════ */
+.quiz-wrap { padding: 20px 16px; }
+.quiz-header { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 16px; box-shadow: var(--sh); }
+.quiz-title { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+.quiz-sub   { font-size: 13px; color: var(--text-3); }
+.quiz-progress { margin-top: 10px; }
+.quiz-prog-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.quiz-prog-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }
+.quiz-prog-label { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+.quiz-question-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; margin-bottom: 12px; box-shadow: var(--sh); }
+.quiz-q-text { font-size: 16px; font-weight: 700; line-height: 1.5; margin-bottom: 16px; }
+.quiz-options { display: flex; flex-direction: column; gap: 8px; }
+.quiz-option {
+  padding: 13px 16px; border: 2px solid var(--border); border-radius: var(--r-sm);
+  font-size: 15px; font-weight: 500; cursor: pointer; transition: all .15s;
+  background: var(--bg); direction: rtl;
+}
+.quiz-option:active { transform: scale(.98); }
+.quiz-option.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+.quiz-option.correct  { border-color: var(--green); background: var(--green-light); color: var(--green); pointer-events: none; }
+.quiz-option.wrong    { border-color: var(--red);   background: var(--red-light);   color: var(--red);   pointer-events: none; }
+
+.quiz-result-card {
+  background: var(--white); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 28px 20px; text-align: center; box-shadow: var(--sh);
+}
+.quiz-score-circle {
+  width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 16px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 5px solid var(--accent);
+}
+.quiz-score-num  { font-size: 28px; font-weight: 900; color: var(--accent); line-height: 1; }
+.quiz-score-denom { font-size: 14px; color: var(--text-3); }
+.quiz-result-title { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+.quiz-result-sub   { font-size: 14px; color: var(--text-3); }
+
+/* ══════════════════════════════════════════
+   PROGRESS MAP
+══════════════════════════════════════════ */
+.progress-map { padding: 20px 16px 40px; }
+.map-course-section { margin-bottom: 28px; }
+.map-course-title { font-size: 16px; font-weight: 800; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.map-track { position: relative; padding-right: 40px; }
+.map-track::before { content: ''; position: absolute; right: 15px; top: 16px; bottom: 16px; width: 2px; background: var(--border); border-radius: 1px; }
+.map-node { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; position: relative; }
+.map-dot { width: 30px; height: 30px; min-width: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; position: absolute; right: 0; z-index: 1; }
+.md-done    { background: var(--green); color: #fff; }
+.md-current { background: var(--accent); color: #fff; box-shadow: 0 0 0 4px var(--accent-mid); }
+.md-todo    { background: var(--white); border: 2px solid var(--border); color: var(--text-3); }
+.md-quiz    { background: var(--amber-light); border: 2px solid var(--amber); color: var(--amber); font-size: 12px; }
+.map-card { margin-right: 46px; flex: 1; background: var(--white); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; box-shadow: var(--sh); cursor: pointer; transition: transform .12s; }
+.map-card:active { transform: scale(.97); }
+.map-card.current { border-color: var(--accent); background: var(--accent-light); }
+.map-card.done    { opacity: .7; }
+.map-card-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+.map-card-meta  { font-size: 12px; color: var(--text-3); }
+
+/* ══════════════════════════════════════════
+   ADMIN — LOGIN
+══════════════════════════════════════════ */
+#screen-admin { min-height: 100vh; display: none; flex-direction: column; align-items: center; justify-content: flex-start; padding: 32px 20px; background: var(--bg); }
+#screen-admin.active { display: flex; }
+.admin-badge { background: var(--red); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: var(--r-full); letter-spacing: .05em; margin-bottom: 20px; }
+
+.admin-panel { width: 100%; max-width: 540px; }
+.admin-card-head { background: linear-gradient(135deg,#1E40AF,#2563EB); border-radius: var(--r) var(--r) 0 0; padding: 20px; color: #fff; }
+.admin-card-head h2 { font-size: 18px; font-weight: 800; }
+.admin-card-head p  { font-size: 13px; opacity: .8; margin-top: 4px; }
+.admin-card-body { background: var(--white); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--r) var(--r); padding: 20px; }
+
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 12px; font-weight: 700; color: var(--text-3); margin-bottom: 6px; display: block; }
+.form-input {
+  width: 100%; padding: 11px 14px; border: 2px solid var(--border); border-radius: var(--r-sm);
+  font-family: 'Rubik', sans-serif; font-size: 15px; background: var(--bg); color: var(--text-1);
+  transition: border-color .2s; -webkit-user-select: text; user-select: text;
+}
+.form-input:focus { outline: none; border-color: var(--accent); }
+textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
+
+/* Admin stats */
+.admin-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.admin-stat  { background: var(--bg); border-radius: var(--r-sm); padding: 14px; text-align: center; }
+.admin-stat-num   { font-size: 28px; font-weight: 900; color: var(--accent); }
+.admin-stat-label { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.admin-section-title { font-size: 12px; font-weight: 700; color: var(--text-3); letter-spacing: .06em; text-transform: uppercase; margin: 20px 0 10px; }
+
+/* Admin tabs */
+.admin-tabs { display: flex; background: var(--bg); border-radius: var(--r-sm); padding: 3px; margin-bottom: 16px; gap: 2px; }
+.admin-tab { flex: 1; padding: 8px; text-align: center; font-size: 13px; font-weight: 700; color: var(--text-3); border-radius: 8px; cursor: pointer; transition: all .2s; }
+.admin-tab.active { background: var(--white); color: var(--accent); box-shadow: var(--sh); }
+
+/* Course tree */
+.course-tree { display: flex; flex-direction: column; gap: 6px; }
+.tree-course {
+  background: var(--white); border: 1px solid var(--border); border-radius: var(--r);
+  overflow: hidden; box-shadow: var(--sh);
+}
+.tree-course-head {
+  padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+  cursor: pointer; background: var(--white);
+}
+.tree-course-head:hover { background: var(--bg); }
+.tree-emoji { font-size: 20px; }
+.tree-course-name { flex: 1; font-size: 15px; font-weight: 700; }
+.tree-actions { display: flex; gap: 4px; }
+.tree-btn {
+  width: 28px; height: 28px; border: none; border-radius: 7px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+  background: var(--bg); color: var(--text-2); transition: background .15s;
+}
+.tree-btn:hover  { background: var(--border); }
+.tree-btn.danger { color: var(--red); }
+.tree-btn.add    { color: var(--green); background: var(--green-light); }
+
+.tree-chapters { border-top: 1px solid var(--border); }
+.tree-chapter  { border-bottom: 1px solid var(--border); }
+.tree-chapter:last-child { border-bottom: none; }
+.tree-chapter-head { padding: 10px 16px 10px 10px; display: flex; align-items: center; gap: 8px; background: var(--bg); cursor: pointer; }
+.tree-chapter-head:hover { background: #E8EDF3; }
+.tree-chapter-num  { width: 22px; height: 22px; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.tree-chapter-name { flex: 1; font-size: 14px; font-weight: 600; }
+
+.tree-lessons { background: var(--white); }
+.tree-lesson  {
+  padding: 9px 16px 9px 14px; display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid var(--border); cursor: pointer;
+}
+.tree-lesson:last-child { border-bottom: none; }
+.tree-lesson:hover { background: var(--bg); }
+.tree-lesson-num  { width: 20px; height: 20px; background: var(--accent-light); color: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+.tree-lesson-name { flex: 1; font-size: 14px; }
+.tree-has-video   { width: 16px; height: 16px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; }
+
+.tree-quiz-row { padding: 9px 16px 9px 14px; display: flex; align-items: center; gap: 8px; background: var(--amber-light); border-top: 1px dashed var(--amber); cursor: pointer; }
+.tree-quiz-row:hover { background: #FDE68A; }
+.tree-quiz-badge { font-size: 12px; }
+.tree-quiz-name  { flex: 1; font-size: 13px; font-weight: 600; color: var(--amber); }
+
+/* Edit panel (right side) */
+.edit-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200;
+  display: none; align-items: flex-end;
+}
+.edit-overlay.open { display: flex; }
+.edit-sheet {
+  background: var(--white); border-radius: var(--r) var(--r) 0 0;
+  width: 100%; max-width: 560px; margin: 0 auto;
+  max-height: 90vh; overflow-y: auto; padding: 0 0 40px;
+}
+.edit-sheet-head {
+  background: var(--accent); color: #fff; padding: 16px 20px;
+  display: flex; align-items: center; gap: 12px;
+  position: sticky; top: 0; z-index: 1;
+}
+.edit-sheet-title { flex: 1; font-size: 16px; font-weight: 700; }
+.edit-sheet-close {
+  width: 32px; height: 32px; background: rgba(255,255,255,.2); border: none;
+  border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: #fff;
+}
+.edit-sheet-body { padding: 20px; }
+.edit-list-item {
+  padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-sm);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+  font-size: 14px;
+}
+.edit-list-input { flex: 1; background: none; border: none; font-family: 'Rubik', sans-serif; font-size: 14px; color: var(--text-1); -webkit-user-select: text; user-select: text; }
+.edit-list-input:focus { outline: none; }
+.edit-list-del { width: 24px; height: 24px; background: var(--red-light); color: var(--red); border: none; border-radius: 6px; cursor: pointer; font-size: 14px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.edit-add-btn { width: 100%; padding: 9px; background: var(--bg); border: 2px dashed var(--border); border-radius: var(--r-sm); font-family: 'Rubik', sans-serif; font-size: 13px; font-weight: 600; color: var(--text-3); cursor: pointer; margin-top: 4px; }
+.edit-add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+/* Quiz editor */
+.quiz-q-editor { background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px; margin-bottom: 8px; }
+.quiz-q-editor-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.quiz-q-num { font-size: 12px; font-weight: 700; color: var(--text-3); }
+.quiz-opt-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.quiz-opt-radio { width: 18px; height: 18px; min-width: 18px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+.quiz-opt-radio.is-answer { border-color: var(--green); background: var(--green-light); color: var(--green); }
+
+/* Admin user list */
+.admin-user-row { background: var(--bg); border-radius: var(--r-sm); padding: 12px; display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.admin-user-avatar { width: 36px; height: 36px; min-width: 36px; background: var(--accent-light); color: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+.admin-user-info { flex: 1; min-width: 0; }
+.admin-user-name { font-size: 14px; font-weight: 700; }
+.admin-user-meta { font-size: 11px; color: var(--text-3); }
+.plan-pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: var(--r-full); }
+.pill-solo   { background: var(--accent-light); color: var(--accent); }
+.pill-class  { background: var(--green-light); color: var(--green); }
+.pill-mentor { background: #FFF7ED; color: #C2410C; }
+
+/* ══════════════════════════════════════════
+   MINIMAP — CLEAN PROGRESS TRACK
+══════════════════════════════════════════ */
+.minimap-wrap {
+  margin-top: 16px;
+  background: rgba(0,0,0,.35);
+  border-radius: 16px;
+  padding: 12px 14px 14px;
+  border: 1px solid rgba(255,255,255,.13);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.minimap-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.mmt-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: rgba(140,210,255,.9);
+}
+.mmt-map-btn {
+  font-size: 12px; font-weight: 700; color: rgba(120,200,255,.65);
+  background: none; border: none; cursor: pointer; padding: 0;
+}
+.minimap-scroll-outer {
+  overflow-x: auto; overflow-y: visible;
+  scrollbar-width: none;
+  direction: ltr;
+}
+.minimap-scroll-outer::-webkit-scrollbar { display: none; }
+
+/* The flat track row */
+.mmd-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 2px 2px; direction: ltr;
+}
+.mmd-ch-chip {
+  font-size: 10px; font-weight: 700; color: rgba(140,210,255,.9);
+  white-space: nowrap; font-family: 'Rubik',sans-serif;
+  background: rgba(37,99,235,.35); border: 1px solid rgba(93,163,255,.35);
+  border-radius: 7px; padding: 3px 7px;
+  flex-shrink: 0; line-height: 1;
+}
+.mmd-line {
+  flex: 0 0 14px; height: 2px;
+  background: rgba(255,255,255,.14); border-radius: 1px;
+}
+.mmd-line.done { background: rgba(74,222,128,.55); }
+.mmd-dot {
+  width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.07);
+}
+.mmd-dot.done {
+  background: rgba(22,163,74,.9); border-color: rgba(74,222,128,.75);
+}
+.mmd-dot.current {
+  width: 22px; height: 22px;
+  background: #2563EB; border-color: #93C5FD;
+  box-shadow: 0 0 0 5px rgba(37,99,235,.4);
+  cursor: pointer;
+}
+.mmd-dot.quiz {
+  border-radius: 3px; transform: rotate(45deg);
+  width: 11px; height: 11px; margin: 0 2px;
+  background: rgba(217,119,6,.85); border-color: rgba(245,158,11,.7);
+}
+.mmd-dot.quiz.done {
+  background: rgba(22,163,74,.9); border-color: rgba(74,222,128,.75);
+}
+/* Progress footer */
+.mmd-footer { margin-top: 10px; }
+.mmd-prog-bar {
+  height: 4px; background: rgba(255,255,255,.13);
+  border-radius: 2px; overflow: hidden; margin-bottom: 5px;
+}
+.mmd-prog-fill {
+  height: 100%; background: rgba(74,222,128,.8); border-radius: 2px;
+  transition: width .5s;
+}
+.mmd-prog-txt {
+  font-size: 12px; color: rgba(255,255,255,.5);
+  font-family: 'Rubik',sans-serif; direction: rtl; display: block;
+}
+
+/* ══════════════════════════════════════════
+   GRADE GRID
+══════════════════════════════════════════ */
+.grade-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.grade-tile {
+  border-radius: 18px; position: relative; overflow: hidden; cursor: pointer;
+  display: flex; flex-direction: column; align-items: flex-start;
+  justify-content: flex-start; padding: 14px 14px 12px;
+  border: 1px solid rgba(255,255,255,.07);
+  transition: transform .15s, box-shadow .15s; min-height: 136px;
+  text-align: right;
+}
+.grade-tile:active { transform: scale(.95); }
+.grade-tile-bg-num {
+  position: absolute; left: -4px; bottom: -14px;
+  font-size: 68px; font-weight: 900; color: rgba(255,255,255,.07);
+  line-height: 1; pointer-events: none; font-family:'Rubik',sans-serif;
+  direction: ltr; letter-spacing: -0.04em;
+}
+.grade-tile-label {
+  font-size: 19px; font-weight: 800; color: #fff;
+  position: relative; z-index: 1; line-height: 1.2;
+  align-self: flex-end;
+}
+.grade-tile-sub {
+  font-size: 13px; color: rgba(255,255,255,.55);
+  margin-top: 3px; position: relative; z-index: 1;
+  align-self: flex-end;
+}
+.grade-tile-open-badge {
+  margin-top: auto; align-self: flex-end; display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(255,255,255,.13); border-radius: 20px;
+  padding: 4px 10px; font-size: 12px; font-weight: 700;
+  color: rgba(255,255,255,.9); position: relative; z-index: 1;
+}
+.grade-tile-buy-btn {
+  margin-top: auto; align-self: flex-end; display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(245,158,11,.92); border-radius: 20px;
+  padding: 5px 12px; font-size: 12px; font-weight: 800; color: #000;
+  border: none; cursor: pointer; position: relative; z-index: 1;
+  font-family: 'Rubik',sans-serif;
+}
+.grade-course-row {
+  display: flex; align-items: center; gap: 12px; padding: 14px;
+  background: var(--bg); border-radius: var(--r); margin-bottom: 8px;
+}
+.grade-course-icon {
+  width: 44px; height: 44px; min-width: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; font-size: 22px;
+}
+.grade-course-info { flex: 1; min-width: 0; }
+.grade-course-name { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+.grade-course-meta { font-size: 12px; color: var(--text-3); }
+.grade-buy-cta {
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg,#F59E0B,#EF4444); color: #fff;
+  border: none; border-radius: var(--r-sm); padding: 8px 12px;
+  font-family: 'Rubik',sans-serif; font-size: 12px; font-weight: 800;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0;
+}
+.grade-open-btn {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent); color: #fff; border: none;
+  border-radius: var(--r-sm); padding: 8px 12px;
+  font-family: 'Rubik',sans-serif; font-size: 12px; font-weight: 800;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0;
+}
+
+/* Fullscreen btn on video */
+.video-fullscreen-btn {
+  position: absolute; top: 8px; left: 8px; z-index: 10;
+  background: rgba(0,0,0,.6); border: none; color: #fff;
+  width: 36px; height: 36px; border-radius: 9px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; backdrop-filter: blur(4px); transition: background .2s;
+}
+.video-fullscreen-btn:active { background: rgba(0,0,0,.9); }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; right: 50%; transform: translateX(50%);
+  background: #0F172A; color: #fff; padding: 10px 20px; border-radius: var(--r-full);
+  font-size: 14px; font-weight: 600; z-index: 999; opacity: 0;
+  transition: opacity .3s; pointer-events: none; white-space: nowrap;
+}
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+<!-- ═══ AUTH ═══ -->
+<div id="screen-auth" class="screen">
+  <div class="auth-logo">ר</div>
+  <div class="auth-title">מתמטיקה עם רפאל</div>
+  <div class="auth-sub" id="auth-sub-text">הזן את האימייל או הטלפון<br>שבהם נרשמת לקורס</div>
+  <div class="auth-error" id="auth-error">לא נמצא חשבון עם הפרטים האלה</div>
+  <input class="auth-input" id="auth-input" type="text" placeholder="example@email.com / 05X-XXXXXXX" autocomplete="off">
+  <!-- Admin password — hidden until admin phone typed -->
+  <div id="admin-pass-wrap" style="width:100%;overflow:hidden;max-height:0;transition:max-height .3s ease,opacity .3s ease;opacity:0;pointer-events:none">
+    <input class="auth-input" id="auth-admin-pass" type="password" placeholder="סיסמת מנהל" autocomplete="off" style="margin-bottom:12px">
+  </div>
+  <button class="btn" id="auth-btn" onclick="handleAuthSubmit()">כניסה ←</button>
+  <div class="spinner" id="auth-spinner"></div>
+</div>
+
+<!-- ═══ HOME ═══ -->
+<div id="screen-home" class="screen">
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="hero-greeting">שלום,</div>
+      <div class="hero-name" id="user-name">—</div>
+      <div class="plan-badge" id="plan-badge">⭐ —</div>
+      <!-- Minimap — pill inside hero -->
+      <div class="minimap-wrap" id="minimap-wrap">
+        <div class="minimap-hdr">
+          <span class="mmt-title">📍 מפת התקדמות</span>
+          <button class="mmt-map-btn" onclick="navTo('progress')">תצוגה מלאה ←</button>
+        </div>
+        <div class="minimap-scroll-outer" id="minimap-scroll-outer"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">בחר כיתה</div>
+    <div class="grade-grid" id="grade-grid"></div>
+  </div>
+
+  <div class="upgrade-banner hidden" id="upgrade-banner" onclick="openUpgrade()">
+    <div class="upgrade-emoji">🚀</div>
+    <div class="upgrade-text">
+      <strong>שדרג את המסלול שלך</strong>
+      קבל גישה לכל הקורסים + ליווי אישי מרפאל
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section">
+    <div class="section-title">גישה מהירה</div>
+    <div class="qa-grid">
+      <div class="qa-tile" onclick="openTg('bot_questions')">
+        <div class="qa-tile-icon" style="background:#EFF6FF">🤖</div>
+        <div class="qa-tile-label">בוט תרגול</div>
+      </div>
+      <div class="qa-tile" onclick="openTg('chat_general')">
+        <div class="qa-tile-icon" style="background:#F0FDF4">💬</div>
+        <div class="qa-tile-label">קהילה</div>
+      </div>
+      <div class="qa-tile" onclick="openSupport()">
+        <div class="qa-tile-icon" style="background:#F0FDF4">🛟</div>
+        <div class="qa-tile-label">תמיכה</div>
+      </div>
+      <div class="qa-tile" onclick="openTg('events')">
+        <div class="qa-tile-icon" style="background:#FFFBEB">📅</div>
+        <div class="qa-tile-label">אירועים</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="height:32px"></div>
+</div>
+
+<!-- ═══ LESSONS ═══ -->
+<div id="screen-lessons" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="navTo('home')">→</button>
+    <div class="nav-title" id="lessons-nav-title">שיעורים</div>
+  </div>
+  <div id="lessons-content"></div>
+</div>
+
+<!-- ═══ LESSON DETAIL ═══ -->
+<div id="screen-lesson-detail" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" id="lesson-back-btn">→</button>
+    <div class="nav-title" id="lesson-detail-title">שיעור</div>
+  </div>
+
+  <!-- Step tabs -->
+  <div class="step-tabs" id="step-tabs">
+    <div class="step-tab active" id="tab-video"     onclick="gotoStep(0)">📖 תיאוריה</div>
+    <div class="step-tab locked"  id="tab-exercises" onclick="gotoStep(1)">✍️ תרגילים</div>
+    <div class="step-tab locked"  id="tab-homework"  onclick="gotoStep(2)">📚 שיעורי בית</div>
+  </div>
+
+  <!-- Step 0: Video -->
+  <div class="step-panel active" id="panel-video">
+    <div id="video-container"></div>
+    <div class="content-card">
+      <div class="content-card-title">📖 נושא השיעור</div>
+      <p id="lesson-description"></p>
+    </div>
+    <button class="step-nav-btn" id="video-next-btn" onclick="unlockStep(1)">
+      מעבר לתרגילים ✍️
+    </button>
+  </div>
+
+  <!-- Step 1: Exercises -->
+  <div class="step-panel" id="panel-exercises">
+    <div class="content-card">
+      <div class="content-card-title">✍️ תרגילים בשיעור</div>
+      <div id="exercises-list"></div>
+    </div>
+    <button class="step-nav-btn" onclick="gotoStep(2)">
+      מעבר לשיעורי בית 📚
+    </button>
+  </div>
+
+  <!-- Step 2: Homework + Done -->
+  <div class="step-panel" id="panel-homework">
+    <div class="content-card">
+      <div class="content-card-title">📚 שיעורי בית</div>
+      <div id="homework-list"></div>
+    </div>
+    <button class="step-nav-btn green" id="done-btn" onclick="markLessonDone()">
+      ✓ סמן שיעור כהושלם
+    </button>
+  </div>
+</div>
+
+<!-- ═══ QUIZ ═══ -->
+<div id="screen-quiz" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" id="quiz-back-btn">→</button>
+    <div class="nav-title" id="quiz-nav-title">מבחן מסכם</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-header">
+      <div class="quiz-title" id="quiz-title">מבחן מסכם</div>
+      <div class="quiz-sub"  id="quiz-sub">ענה על כל השאלות</div>
+      <div class="quiz-progress">
+        <div class="quiz-prog-bar"><div class="quiz-prog-fill" id="quiz-prog-fill" style="width:0%"></div></div>
+        <div class="quiz-prog-label" id="quiz-prog-label">שאלה 1 מתוך ?</div>
+      </div>
+    </div>
+    <div id="quiz-body"></div>
+  </div>
+</div>
+
+<!-- ═══ PROGRESS MAP ═══ -->
+<div id="screen-progress" class="screen">
+  <div class="top-nav">
+    <button class="nav-back" onclick="navTo('home')">→</button>
+    <div class="nav-title">מפת התקדמות</div>
+  </div>
+  <div class="progress-map" id="progress-map-content"></div>
+</div>
+
+<!-- ═══ ADMIN ═══ -->
+<div id="screen-admin" class="screen">
+  <div style="padding:16px;width:100%;max-width:560px;margin:0 auto">
+    <div class="top-nav" style="position:static;border-radius:var(--r) var(--r) 0 0;margin-bottom:0">
+      <button class="nav-back" onclick="navTo('home')">→</button>
+      <div class="nav-title">🎛️ ניהול קורסים</div>
+      <span class="admin-badge" style="margin:0">ADMIN</span>
+    </div>
+
+    <!-- Login panel -->
+    <div id="admin-login-panel">
+      <div class="admin-card-body" style="border-radius:0 0 var(--r) var(--r);border-top:none">
+        <div class="form-group">
+          <label class="form-label">מספר טלפון</label>
+          <input class="form-input auth-input" id="admin-phone" type="tel" placeholder="05X-XXXXXXX" dir="ltr">
+        </div>
+        <div class="form-group">
+          <label class="form-label">סיסמה</label>
+          <input class="form-input auth-input" id="admin-pass" type="password" placeholder="••••••••" dir="ltr">
+        </div>
+        <div class="auth-error" id="admin-error">פרטים שגויים</div>
+        <button class="btn" onclick="doAdminLogin()">כניסה</button>
+        <div class="spinner" id="admin-spinner"></div>
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="admin-dashboard" class="hidden">
+      <!-- Tabs -->
+      <div class="admin-tabs" style="margin-top:12px">
+        <div class="admin-tab active" onclick="switchAdminTab('courses')">📚 קורסים</div>
+        <div class="admin-tab" onclick="switchAdminTab('users')">👥 משתמשים</div>
+        <div class="admin-tab" onclick="switchAdminTab('stats')">📊 סטטיסטיקות</div>
+      </div>
+
+      <!-- Tab: courses -->
+      <div id="admin-tab-courses">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div class="admin-section-title" style="margin:0">עץ קורסים</div>
+          <button class="btn btn-sm btn-outline" onclick="openEditSheet('new-course')">+ קורס חדש</button>
+        </div>
+        <div class="course-tree" id="course-tree"></div>
+      </div>
+
+      <!-- Tab: users -->
+      <div id="admin-tab-users" class="hidden">
+        <div class="admin-section-title">משתמשים אחרונים</div>
+        <div id="admin-user-list">טוען...</div>
+      </div>
+
+      <!-- Tab: stats -->
+      <div id="admin-tab-stats" class="hidden">
+        <div class="admin-section-title">סטטיסטיקות</div>
+        <div class="admin-stats" id="admin-stats-grid"></div>
+        <button class="btn btn-outline" onclick="loadAdminData()">🔄 רענן</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ EDIT SHEET (bottom sheet overlay) ═══ -->
+<div class="edit-overlay" id="edit-overlay" onclick="closeEditSheet(event)">
+  <div class="edit-sheet" id="edit-sheet" onclick="event.stopPropagation()">
+    <div class="edit-sheet-head">
+      <div class="edit-sheet-title" id="edit-sheet-title">עריכה</div>
+      <button class="edit-sheet-close" onclick="closeEditSheet()">✕</button>
+    </div>
+    <div class="edit-sheet-body" id="edit-sheet-body"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════
+//  CONFIG & STATE
+// ══════════════════════════════════════
+const API = '';
+const TG_LINKS = {
+  bot_questions: 'https://t.me/rafael_math_bot',
+  chat_general:  'https://t.me/rafael_math_community',
+  events:        'https://t.me/rafael_math_events',
+};
+const PLANS = {
+  סולו:  { emoji:'📘', courses:['חטיבה-תיכון'] },
+  כיתה:  { emoji:'🎓', courses:['חטיבה-תיכון','הכנה לבגרות'] },
+  מנטור: { emoji:'⭐', courses:['חטיבה-תיכון','הכנה לבגרות','בגרות מורחבת'] },
+};
+
+const GRADE_MAP = [
+  {
+    id: 'grade10', label: 'כיתה י׳', heb: 'י',
+    gradient: 'linear-gradient(145deg,#0D1E3E,#1A3562)',
+    courses: [
+      { id: 'חטיבה-תיכון',  name: 'הכנה לתיכון',    emoji: '📐' },
+      { id: 'מתכונת-י',     name: 'הכנה למתכונת',   emoji: '📊' },
+    ]
+  },
+  {
+    id: 'grade11', label: 'כיתה יא׳', heb: 'יא',
+    gradient: 'linear-gradient(145deg,#0D2818,#1A4228)',
+    courses: [
+      { id: 'הכנה לבגרות',  name: 'הכנה לבגרות',    emoji: '📝' },
+      { id: 'מתכונת-יא',    name: 'הכנה למתכונת',   emoji: '📊' },
+    ]
+  },
+  {
+    id: 'grade12', label: 'כיתה יב׳', heb: 'יב',
+    gradient: 'linear-gradient(145deg,#2A1208,#3E1E0D)',
+    courses: [
+      { id: 'בגרות מורחבת', name: 'הכנה לבגרות',    emoji: '🏆' },
+      { id: 'מתכונת-יב',    name: 'הכנה למתכונת',   emoji: '📊' },
+    ]
+  },
+  {
+    id: 'all', label: 'כל הקורסים', heb: '∞',
+    gradient: 'linear-gradient(145deg,#18102A,#261848)',
+    courses: 'all'
+  }
+];
+
+const tg     = window.Telegram?.WebApp;
+const tgUser = tg?.initDataUnsafe?.user;
+if (tg) { tg.ready(); tg.expand(); }
+
+let currentUser     = null;
+let curriculum      = [];   // loaded from server
+let lastCourseId    = null;
+let currentCourseId = null;
+let currentLesson   = null;
+let currentStep     = 0;
+let videoWatched    = false;
+let currentQuiz     = null;
+let currentQuizCourseId = null;
+let currentQuizChapterId = null;
+let quizAnswers     = {};
+let quizSubmitted   = false;
+
+const completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '{}');
+const completedQuizzes = JSON.parse(localStorage.getItem('completedQuizzes')  || '{}');
+
+// ══════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════
+function navTo(screen, param) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + screen).classList.add('active');
+  window.scrollTo(0, 0);
+  if (screen === 'lessons' && param) { currentCourseId = param; renderLessons(param); }
+  if (screen === 'progress') renderProgressMap();
+  if (screen === 'home' && currentUser) renderHome();
+}
+
+// ══════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════
+(async () => {
+  // Load curriculum first
+  try {
+    const r = await fetch(`${API}/api/curriculum`);
+    if (r.ok) curriculum = await r.json();
+  } catch {}
+
+  if (tgUser?.id) {
+    try {
+      const r = await fetch(`${API}/api/me`, { headers: { 'x-telegram-id': String(tgUser.id) } });
+      if (r.ok) { currentUser = await r.json(); loadApp(); return; }
+    } catch {}
+  }
+  document.getElementById('screen-auth').classList.add('active');
+})();
+
+// ══════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════
+async function doAuth() {
+  const identifier = document.getElementById('auth-input').value.trim();
+  if (!identifier) return;
+  const btn = document.getElementById('auth-btn');
+  const sp  = document.getElementById('auth-spinner');
+  const err = document.getElementById('auth-error');
+  btn.style.display = 'none'; sp.style.display = 'block'; err.style.display = 'none';
+  try {
+    const r = await fetch(`${API}/api/auth`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ identifier, telegram_id: tgUser?.id?String(tgUser.id):null, telegram_name: tgUser?.first_name?`${tgUser.first_name} ${tgUser.last_name||''}`.trim():null, initData: tg?.initData||'' }),
+    });
+    sp.style.display = 'none';
+    if (!r.ok) { btn.style.display='block'; err.style.display='block'; return; }
+    currentUser = await r.json();
+    loadApp();
+  } catch {
+    sp.style.display='none'; btn.style.display='block';
+    err.textContent='שגיאת תקשורת'; err.style.display='block';
+  }
+}
+
+const ADMIN_PHONE_TRIGGER = '0535266628';
+let isAdminMode = false;
+
+document.getElementById('auth-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (isAdminMode) document.getElementById('auth-admin-pass').focus();
+    else handleAuthSubmit();
+  }
+});
+document.getElementById('auth-admin-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleAuthSubmit();
+});
+
+document.getElementById('auth-input').addEventListener('input', e => {
+  const val = e.target.value.replace(/[\s\-]/g, '');
+  const wrap = document.getElementById('admin-pass-wrap');
+  if (val === ADMIN_PHONE_TRIGGER) {
+    isAdminMode = true;
+    wrap.classList.add('visible');
+    document.getElementById('auth-btn').textContent = 'כניסת מנהל 🔐';
+    document.getElementById('auth-sub-text').innerHTML = 'זוהה מספר מנהל —<br>הזן את הסיסמה להמשך';
+    setTimeout(() => document.getElementById('auth-admin-pass').focus(), 320);
+  } else {
+    isAdminMode = false;
+    wrap.classList.remove('visible');
+    document.getElementById('auth-admin-pass').value = '';
+    document.getElementById('auth-btn').textContent = 'כניסה ←';
+    document.getElementById('auth-sub-text').innerHTML = 'הזן את האימייל או הטלפון<br>שבהם נרשמת לקורס';
+  }
+});
+
+function handleAuthSubmit() {
+  if (isAdminMode) {
+    const pass = document.getElementById('auth-admin-pass').value;
+    if (!pass) { document.getElementById('auth-admin-pass').focus(); return; }
+    // pre-fill the hidden admin screen fields and login
+    document.getElementById('admin-phone').value = ADMIN_PHONE_TRIGGER;
+    document.getElementById('admin-pass').value  = pass;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-admin').classList.add('active');
+    doAdminLogin();
+  } else {
+    doAuth();
+  }
+}
+
+// ══════════════════════════════════════
+//  LOAD APP
+// ══════════════════════════════════════
+function loadApp() {
+  document.getElementById('screen-auth').classList.remove('active');
+  renderHome();
+  navTo('home');
+}
+
+function renderHome() {
+  const plan     = currentUser.plan || 'סולו';
+  const planData = PLANS[plan] || PLANS['סולו'];
+  document.getElementById('user-name').textContent  = currentUser.name || tgUser?.first_name || 'שלום';
+  document.getElementById('plan-badge').textContent = `${planData.emoji} מסלול ${plan}`;
+  if (plan !== 'מנטור') document.getElementById('upgrade-banner').classList.remove('hidden');
+
+  const firstCourseId = planData.courses[0];
+  lastCourseId = firstCourseId;
+  const firstCourse = curriculum.find(c => c.id === firstCourseId);
+  renderGradeGrid();
+  renderMinimap();
+}
+
+function renderGradeGrid() {
+  const el = document.getElementById('grade-grid');
+  if (!el) return;
+  const userPlan  = currentUser?.plan || 'סולו';
+  const planCourses = PLANS[userPlan]?.courses || [];
+
+  el.innerHTML = GRADE_MAP.map(grade => {
+    const coursesArr = grade.courses === 'all'
+      ? curriculum.map(c => ({ id: c.id, name: c.name, emoji: c.emoji }))
+      : grade.courses;
+
+    const totalCount = coursesArr.length;
+    const openCount  = coursesArr.filter(gc =>
+      planCourses.includes(gc.id) && curriculum.find(c => c.id === gc.id)
+    ).length;
+
+    const badge = openCount > 0
+      ? `<span class="grade-tile-open-badge">▶ ${openCount} פתוח</span>`
+      : `<button class="grade-tile-buy-btn" onclick="event.stopPropagation();openUpgrade()">🛒 רכישה</button>`;
+
+    return `
+      <div class="grade-tile" style="background:${grade.gradient}" onclick="openGrade('${grade.id}')">
+        <div class="grade-tile-label">${grade.label}</div>
+        <div class="grade-tile-sub">${totalCount} קורסים</div>
+        ${badge}
+        <div class="grade-tile-bg-num">${grade.heb}</div>
+      </div>`;
+  }).join('');
+}
+
+function openGrade(gradeId) {
+  const grade = GRADE_MAP.find(g => g.id === gradeId);
+  if (!grade) return;
+
+  const coursesArr = grade.courses === 'all'
+    ? curriculum.map(c => ({ id: c.id, name: c.name, emoji: c.emoji }))
+    : grade.courses;
+
+  const userPlan    = currentUser?.plan || 'סולו';
+  const planCourses = PLANS[userPlan]?.courses || [];
+
+  let html = '';
+  coursesArr.forEach(gc => {
+    const cc        = curriculum.find(c => c.id === gc.id);
+    const hasAccess = planCourses.includes(gc.id) && cc;
+    const locked    = !cc || !planCourses.includes(gc.id);
+
+    let progressHtml = '';
+    if (hasAccess) {
+      const total = cc.chapters.reduce((s, ch) => s + ch.lessons.length, 0);
+      const done  = cc.chapters.reduce((s, ch) => s + ch.lessons.filter(l => completedLessons[l.id]).length, 0);
+      const pct   = total ? Math.round(done / total * 100) : 0;
+      progressHtml = `<div style="margin-top:5px">
+        <div class="prog-bar-bg"><div class="prog-bar-fill" style="width:${pct}%"></div></div>
+        <div class="prog-label">${done}/${total} שיעורים · ${pct}%</div>
+      </div>`;
+    }
+
+    const actionBtn = hasAccess
+      ? `<button class="grade-open-btn" onclick="navTo('lessons','${gc.id}');closeEditSheet()">כניסה ←</button>`
+      : `<button class="grade-buy-cta" onclick="openUpgrade()">🛒 רכישה</button>`;
+
+    const colorCls = cc?.color || 'ct-blue';
+    const emoji    = cc?.emoji || gc.emoji || '📚';
+
+    html += `
+      <div class="grade-course-row" style="opacity:${locked && !cc ? '.55' : '1'}">
+        <div class="grade-course-icon ${colorCls}">${emoji}</div>
+        <div class="grade-course-info">
+          <div class="grade-course-name">${gc.name || cc?.name || '—'}</div>
+          <div class="grade-course-meta">${cc ? (cc.meta || '') : '🔒 לא זמין עדיין'}</div>
+          ${progressHtml}
+        </div>
+        ${actionBtn}
+      </div>`;
+  });
+
+  const overlay = document.getElementById('edit-overlay');
+  document.getElementById('edit-sheet-title').textContent = grade.label;
+  document.getElementById('edit-sheet-body').innerHTML = html;
+  editContext = { type: 'grade', id: gradeId };
+  overlay.classList.add('open');
+}
+
+function renderMinimap() {
+  const plan     = currentUser?.plan || 'סולו';
+  const courseId = (PLANS[plan]?.courses || [])[0];
+  const course   = curriculum.find(c => c.id === courseId);
+  const outer    = document.getElementById('minimap-scroll-outer');
+  if (!outer || !course) return;
+
+  // Count totals for progress bar
+  let totalLessons = 0, doneLessons = 0;
+  course.chapters.forEach(ch => ch.lessons.forEach(ls => {
+    totalLessons++;
+    if (completedLessons[ls.id]) doneLessons++;
+  }));
+
+  // Find current (first incomplete) lesson
+  let currentLesson = null;
+  outer_loop: for (const ch of course.chapters) {
+    for (const ls of ch.lessons) {
+      if (!completedLessons[ls.id]) { currentLesson = ls; break outer_loop; }
+    }
+  }
+
+  // Build flat row: [chapter chip] [dot] [dot] … [quiz] | [chapter chip] …
+  const parts = [];
+  course.chapters.forEach((ch, ci) => {
+    // Chapter separator line between chapters
+    if (ci > 0) parts.push(`<div class="mmd-line${
+      ch.lessons.some(ls => completedLessons[ls.id]) ? ' done' : ''
+    }"></div>`);
+
+    // Chapter name chip
+    const shortName = ch.title.length > 9 ? ch.title.substring(0, 8) + '…' : ch.title;
+    parts.push(`<div class="mmd-ch-chip">${shortName}</div>`);
+
+    // Lesson dots
+    ch.lessons.forEach(ls => {
+      const done   = !!completedLessons[ls.id];
+      const isCur  = ls === currentLesson;
+      const cls    = done ? 'done' : isCur ? 'current' : 'todo';
+      const click  = isCur ? ' onclick="goContinue()"' : '';
+      parts.push(`<div class="mmd-dot ${cls}"${click} title="${ls.title}"></div>`);
+    });
+
+    // Quiz diamond
+    if (ch.quiz) {
+      const qDone = !!completedQuizzes[ch.id];
+      parts.push(`<div class="mmd-dot quiz${qDone ? ' done' : ''}" title="מבחן פרק"></div>`);
+    }
+  });
+
+  const pct = totalLessons ? Math.round(doneLessons / totalLessons * 100) : 0;
+
+  outer.innerHTML = `
+    <div class="mmd-row">${parts.join('')}</div>
+    <div class="mmd-footer">
+      <div class="mmd-prog-bar"><div class="mmd-prog-fill" style="width:${pct}%"></div></div>
+      <span class="mmd-prog-txt">${doneLessons} / ${totalLessons} שיעורים הושלמו · ${pct}% · לחץ על ● הכחול להמשיך</span>
+    </div>`;
+
+  // Scroll so the current dot is visible
+  setTimeout(() => {
+    const cur = outer.querySelector('.mmd-dot.current');
+    if (cur) cur.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+  }, 130);
+}
+
+function renderCourses(unlockedIds) {
+  const list = document.getElementById('courses-list');
+  list.innerHTML = '';
+  curriculum.forEach(c => {
+    const unlocked = unlockedIds.includes(c.id);
+    const total = c.chapters.reduce((s, ch) => s + ch.lessons.length, 0);
+    const done  = c.chapters.reduce((s, ch) => s + ch.lessons.filter(l => completedLessons[l.id]).length, 0);
+    const pct   = total ? Math.round(done/total*100) : 0;
+    const card  = document.createElement('div');
+    card.className = `course-card${unlocked?'':' locked'}`;
+    if (unlocked) card.onclick = () => navTo('lessons', c.id);
+    card.innerHTML = `
+      <div class="course-thumb ${c.color}">${c.emoji}</div>
+      <div class="course-body">
+        <div class="course-info">
+          <div class="course-name">${c.name}</div>
+          <div class="course-meta">${c.meta}</div>
+          ${unlocked?`<div class="course-prog"><div class="prog-bar-bg"><div class="prog-bar-fill" style="width:${pct}%"></div></div><div class="prog-label">${done}/${total} שיעורים</div></div>`:''}
+        </div>
+        ${unlocked?`<span class="course-badge badge-open">פתוח</span>`:`<span class="course-badge badge-locked">🔒 נעול</span>`}
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function goContinue() {
+  if (!lastCourseId) return;
+  navTo('lessons', lastCourseId);
+}
+
+// ══════════════════════════════════════
+//  LESSONS SCREEN
+// ══════════════════════════════════════
+function renderLessons(courseId) {
+  const c = curriculum.find(c => c.id === courseId);
+  if (!c) return;
+  document.getElementById('lessons-nav-title').textContent = c.name;
+  const total = c.chapters.reduce((s,ch)=>s+ch.lessons.length,0);
+  const done  = c.chapters.reduce((s,ch)=>s+ch.lessons.filter(l=>completedLessons[l.id]).length,0);
+  const pct   = total?Math.round(done/total*100):0;
+
+  let html = `
+    <div class="course-hero">
+      <div class="course-hero-thumb ${c.color}">${c.emoji}</div>
+      <div class="course-hero-name">${c.name}</div>
+      <div class="course-hero-meta">${c.meta} · ${pct}% הושלם</div>
+      <div class="course-bar-bg"><div class="course-bar-fill" style="width:${pct}%"></div></div>
+    </div>
+    <div class="chapters-list">`;
+
+  c.chapters.forEach((ch, ci) => {
+    const chDone = ch.lessons.filter(l => completedLessons[l.id]).length;
+    const allChDone = chDone === ch.lessons.length && ch.lessons.length > 0;
+    const quizDone  = completedQuizzes[ch.id];
+    html += `
+      <div class="chapter-block${ci===0?' open':''}" id="ch-${courseId}-${ci}">
+        <div class="chapter-header" onclick="toggleChapter('${courseId}',${ci})">
+          <div class="chapter-num">${ci+1}</div>
+          <div class="chapter-title">${ch.title}</div>
+          <div class="chapter-count">${chDone}/${ch.lessons.length}</div>
+          <div class="chapter-chevron">▼</div>
+        </div>
+        <div class="lessons-list">`;
+
+    ch.lessons.forEach((ls, li) => {
+      const done = !!completedLessons[ls.id];
+      const isNext = !done && ch.lessons.findIndex(l=>!completedLessons[l.id])===li;
+      const stClass = done?'ls-done':(isNext?'ls-current':'ls-todo');
+      const stIcon  = done?'✓':(isNext?'▶':`${li+1}`);
+      html += `
+        <div class="lesson-row${done?' completed':''}" onclick="openLesson('${courseId}','${ch.id}','${ls.id}')">
+          <div class="lesson-status ${stClass}">${stIcon}</div>
+          <div class="lesson-body">
+            <div class="lesson-title">${ls.title}</div>
+            <div class="lesson-tags">${ls.tags.map(t=>`<span class="lesson-tag">${t}</span>`).join('')}</div>
+          </div>
+          <div style="font-size:14px;color:var(--text-3)">←</div>
+        </div>`;
+    });
+
+    // Quiz row
+    if (ch.quiz) {
+      const quizLocked = !allChDone;
+      html += `
+        <div class="quiz-row${quizLocked?' locked':''}" onclick="openQuiz('${courseId}','${ch.id}')">
+          <div class="quiz-row-icon">${quizDone?'✅':'📝'}</div>
+          <div>
+            <div class="quiz-row-text">${ch.quiz.title||'מבחן מסכם'}</div>
+            <div class="quiz-row-sub">${quizLocked?'השלם את כל השיעורים תחילה':(quizDone?`ציון: ${completedQuizzes[ch.id]}%`:'ענה על השאלות לסיום הפרק')}</div>
+          </div>
+        </div>`;
+    }
+    html += `</div></div>`;
+  });
+  html += '</div>';
+  document.getElementById('lessons-content').innerHTML = html;
+}
+
+function toggleChapter(courseId, ci) {
+  document.getElementById(`ch-${courseId}-${ci}`).classList.toggle('open');
+}
+
+// ══════════════════════════════════════
+//  LESSON DETAIL — STEP FLOW
+// ══════════════════════════════════════
+function openLesson(courseId, chapterId, lessonId) {
+  currentCourseId = courseId;
+  const c  = curriculum.find(c => c.id === courseId);
+  const ch = c?.chapters.find(ch => ch.id === chapterId);
+  const ls = ch?.lessons.find(l => l.id === lessonId);
+  if (!ls) return;
+
+  currentLesson = { ...ls, courseId, chapterId };
+  videoWatched  = false;
+  currentStep   = 0;
+
+  document.getElementById('lesson-detail-title').textContent = ls.title;
+  document.getElementById('lesson-back-btn').onclick = () => navTo('lessons', courseId);
+
+  // Video
+  const vc = document.getElementById('video-container');
+  if (ls.video_url) {
+    const src = ls.video_url.replace('www.dropbox.com','dl.dropboxusercontent.com').replace('?dl=0','?raw=1').replace('dl.dropboxusercontent.com','dl.dropboxusercontent.com');
+    vc.innerHTML = `
+      <div class="video-wrap">
+        <video id="lesson-video" controls controlslist="nodownload" playsinline
+          oncontextmenu="return false"
+          onended="onVideoEnd()"
+          ontimeupdate="onVideoProgress(this)">
+          <source src="${src}" type="video/mp4">
+        </video>
+        <button class="video-fullscreen-btn" onclick="enterFullscreen()" title="מסך מלא">⛶</button>
+      </div>
+      <div class="video-progress-note" id="video-note">
+        ⏱️ צפה בסרטון עד הסוף כדי להמשיך לתרגילים
+      </div>`;
+    document.getElementById('video-next-btn').textContent = 'מעבר לתרגילים ✍️';
+    document.getElementById('video-next-btn').disabled = true;
+  } else {
+    vc.innerHTML = `<div class="video-placeholder"><div class="video-placeholder-icon">📹</div><div class="video-placeholder-text">סרטון יתווסף בקרוב</div></div>`;
+    document.getElementById('video-next-btn').disabled = false;
+    videoWatched = true;
+  }
+
+  // Description
+  document.getElementById('lesson-description').textContent = ls.description || `בשיעור זה נלמד את נושא ${ls.title}.`;
+
+  // Exercises
+  const el = document.getElementById('exercises-list');
+  el.innerHTML = ls.exercises.length
+    ? ls.exercises.map(ex => `<div class="exercise-item"><div class="exercise-q">${ex}</div></div>`).join('')
+    : '<div style="color:var(--text-3);font-size:14px">אין תרגילים לשיעור זה</div>';
+
+  // Homework
+  const hl = document.getElementById('homework-list');
+  hl.innerHTML = ls.homework.length
+    ? ls.homework.map((h,i) => `<div class="hw-item"><div class="hw-num">${i+1}</div><div class="hw-text">${h}</div></div>`).join('')
+    : '<div style="color:var(--text-3);font-size:14px">אין שיעורי בית לשיעור זה</div>';
+
+  // Done button
+  const doneBtn = document.getElementById('done-btn');
+  if (completedLessons[ls.id]) {
+    doneBtn.textContent = '✓ שיעור הושלם'; doneBtn.classList.add('done'); doneBtn.disabled = true;
+  } else {
+    doneBtn.textContent = '✓ סמן שיעור כהושלם'; doneBtn.classList.remove('done'); doneBtn.disabled = false;
+  }
+
+  // Reset tabs — always start on theory tab
+  lockStep(1); lockStep(2);
+  if (completedLessons[ls.id]) { unlockStepOnly(1); unlockStepOnly(2); }
+  gotoStep(0);  // always land on step 0
+
+  navTo('lesson-detail');
+}
+
+function gotoStep(n) {
+  const panels = ['panel-video','panel-exercises','panel-homework'];
+  const tabs   = ['tab-video','tab-exercises','tab-homework'];
+  panels.forEach((p,i) => document.getElementById(p).classList.toggle('active', i===n));
+  tabs.forEach((t,i)   => {
+    const el = document.getElementById(t);
+    el.classList.toggle('active', i===n);
+  });
+  currentStep = n;
+  window.scrollTo(0,0);
+}
+
+function lockStep(n) {
+  const tabs = ['tab-video','tab-exercises','tab-homework'];
+  document.getElementById(tabs[n]).classList.add('locked');
+}
+
+function unlockStep(n) {
+  const tabs = ['tab-video','tab-exercises','tab-homework'];
+  document.getElementById(tabs[n]).classList.remove('locked');
+  if (n === 1) document.getElementById('video-next-btn').disabled = false;
+  gotoStep(n);
+}
+function unlockStepOnly(n) {
+  // Unlock without navigating (used when opening already-completed lessons)
+  const tabs = ['tab-video','tab-exercises','tab-homework'];
+  document.getElementById(tabs[n]).classList.remove('locked');
+  if (n === 1) document.getElementById('video-next-btn').disabled = false;
+}
+
+function onVideoEnd() {
+  videoWatched = true;
+  const note = document.getElementById('video-note');
+  if (note) note.style.display = 'none';
+  unlockStep(1);
+}
+
+function onVideoProgress(video) {
+  // unlock if >80% watched
+  if (!videoWatched && video.duration > 0 && video.currentTime / video.duration > 0.8) {
+    onVideoEnd();
+  }
+}
+
+function markLessonDone() {
+  if (!currentLesson) return;
+  completedLessons[currentLesson.id] = true;
+  localStorage.setItem('completedLessons', JSON.stringify(completedLessons));
+  const btn = document.getElementById('done-btn');
+  btn.textContent = '✓ שיעור הושלם'; btn.classList.add('done'); btn.disabled = true;
+  showToast('שיעור הושלם! 🎉');
+  syncProgress();
+}
+
+// ══════════════════════════════════════
+//  QUIZ
+// ══════════════════════════════════════
+function openQuiz(courseId, chapterId) {
+  const c  = curriculum.find(c => c.id === courseId);
+  const ch = c?.chapters.find(ch => ch.id === chapterId);
+  if (!ch?.quiz) return;
+
+  currentQuiz = JSON.parse(ch.quiz.questions || '[]');
+  currentQuizCourseId   = courseId;
+  currentQuizChapterId  = chapterId;
+  quizAnswers   = {};
+  quizSubmitted = false;
+
+  document.getElementById('quiz-nav-title').textContent = ch.quiz.title || 'מבחן מסכם';
+  document.getElementById('quiz-title').textContent     = ch.quiz.title || 'מבחן מסכם';
+  document.getElementById('quiz-sub').textContent       = `${currentQuiz.length} שאלות`;
+  document.getElementById('quiz-back-btn').onclick = () => navTo('lessons', courseId);
+
+  renderQuiz();
+  navTo('quiz');
+}
+
+function renderQuiz() {
+  const qs = currentQuiz;
+  document.getElementById('quiz-prog-label').textContent = `${qs.length} שאלות`;
+  document.getElementById('quiz-prog-fill').style.width  = '0%';
+
+  let html = '';
+  qs.forEach((q, qi) => {
+    const opts = q.options || [];
+    html += `
+      <div class="quiz-question-card">
+        <div class="quiz-q-text">${qi+1}. ${q.q}</div>
+        <div class="quiz-options">
+          ${opts.map((opt, oi) => `
+            <div class="quiz-option" id="qo-${qi}-${oi}" onclick="selectAnswer(${qi},${oi})">
+              ${opt}
+            </div>`).join('')}
+        </div>
+      </div>`;
+  });
+  html += `<button class="btn" id="quiz-submit-btn" onclick="submitQuiz()" disabled>הגש מבחן</button>`;
+  document.getElementById('quiz-body').innerHTML = html;
+}
+
+function selectAnswer(qi, oi) {
+  if (quizSubmitted) return;
+  quizAnswers[qi] = oi;
+  // update UI
+  const opts = currentQuiz[qi].options;
+  opts.forEach((_, i) => {
+    const el = document.getElementById(`qo-${qi}-${i}`);
+    el.classList.toggle('selected', i === oi);
+  });
+  // Update progress
+  const answered = Object.keys(quizAnswers).length;
+  document.getElementById('quiz-prog-fill').style.width = `${answered/currentQuiz.length*100}%`;
+  document.getElementById('quiz-prog-label').textContent = `${answered}/${currentQuiz.length} נענו`;
+  // Enable submit when all answered
+  if (answered === currentQuiz.length) {
+    document.getElementById('quiz-submit-btn').disabled = false;
+  }
+}
+
+function submitQuiz() {
+  quizSubmitted = true;
+  let score = 0;
+  currentQuiz.forEach((q, qi) => {
+    const userAns = quizAnswers[qi];
+    const correct = q.answer;
+    if (userAns === correct) score++;
+    (q.options||[]).forEach((_, oi) => {
+      const el = document.getElementById(`qo-${qi}-${oi}`);
+      if (oi === correct) el.classList.add('correct');
+      else if (oi === userAns && oi !== correct) el.classList.add('wrong');
+      el.classList.remove('selected');
+    });
+  });
+
+  const pct = Math.round(score / currentQuiz.length * 100);
+  completedQuizzes[currentQuizChapterId] = pct;
+  localStorage.setItem('completedQuizzes', JSON.stringify(completedQuizzes));
+
+  // Save to server
+  fetch(`${API}/api/quiz-result`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ telegram_id: currentUser?.telegram_id, quiz_id: currentQuizChapterId, score, total: currentQuiz.length }),
+  }).catch(()=>{});
+
+  const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '👍' : '💪';
+  const msg   = pct >= 80 ? 'כל הכבוד! עבודה מעולה!' : pct >= 60 ? 'לא רע! כדאי לחזור על הנושאים שפספסת.' : 'המשך להתאמן ונסה שנית!';
+
+  // Append result
+  document.getElementById('quiz-body').innerHTML += `
+    <div class="quiz-result-card" style="margin-top:16px">
+      <div class="quiz-score-circle">
+        <div class="quiz-score-num">${score}</div>
+        <div class="quiz-score-denom">מתוך ${currentQuiz.length}</div>
+      </div>
+      <div class="quiz-result-title">${emoji} ציון: ${pct}%</div>
+      <div class="quiz-result-sub">${msg}</div>
+      <button class="btn" style="margin-top:16px" onclick="navTo('lessons','${currentQuizCourseId}')">חזרה לשיעורים</button>
+    </div>`;
+
+  document.getElementById('quiz-submit-btn').style.display = 'none';
+}
+
+// ══════════════════════════════════════
+//  PROGRESS MAP
+// ══════════════════════════════════════
+function renderProgressMap() {
+  const plan = currentUser?.plan || 'סולו';
+  const unlockedCourses = PLANS[plan]?.courses || ['חטיבה-תיכון'];
+  let html = '';
+
+  curriculum.filter(c => unlockedCourses.includes(c.id)).forEach(c => {
+    html += `<div class="map-course-section">
+      <div class="map-course-title">${c.emoji} ${c.name}</div>
+      <div class="map-track">`;
+
+    c.chapters.forEach(ch => {
+      const allLessons = ch.lessons;
+      allLessons.forEach(ls => {
+        const done   = !!completedLessons[ls.id];
+        const isNext = !done && allLessons.find(l=>!completedLessons[l.id])?.id === ls.id;
+        const dotC   = done?'md-done':(isNext?'md-current':'md-todo');
+        const dotI   = done?'✓':(isNext?'▶':'');
+        html += `
+          <div class="map-node">
+            <div class="map-dot ${dotC}">${dotI}</div>
+            <div class="map-card ${done?'done':(isNext?'current':'')}" onclick="openLesson('${c.id}','${ch.id}','${ls.id}')">
+              <div class="map-card-title">${ls.title}</div>
+              <div class="map-card-meta">${ls.tags.join(' · ')}</div>
+            </div>
+          </div>`;
+      });
+
+      // Quiz node
+      if (ch.quiz) {
+        const allDone  = allLessons.every(l => completedLessons[l.id]);
+        const quizDone = completedQuizzes[ch.id];
+        html += `
+          <div class="map-node">
+            <div class="map-dot md-quiz">📝</div>
+            <div class="map-card${quizDone?' done':(!allDone?' done':' current')}" onclick="${allDone?`openQuiz('${c.id}','${ch.id}')`:''}" style="${!allDone?'opacity:.4;cursor:default':''}">
+              <div class="map-card-title">${ch.quiz.title||'מבחן מסכם'}</div>
+              <div class="map-card-meta">${quizDone?`ציון: ${quizDone}%`:(!allDone?'השלם את כל השיעורים':'לחץ לפתיחת המבחן')}</div>
+            </div>
+          </div>`;
+      }
+    });
+    html += '</div></div>';
+  });
+
+  document.getElementById('progress-map-content').innerHTML = html;
+}
+
+// ══════════════════════════════════════
+//  ADMIN
+// ══════════════════════════════════════
+async function doAdminLogin() {
+  const phone = document.getElementById('admin-phone').value.trim();
+  const pass  = document.getElementById('admin-pass').value.trim();
+  const errEl = document.getElementById('admin-error');
+  const sp    = document.getElementById('admin-spinner');
+  errEl.style.display='none'; sp.style.display='block';
+  try {
+    const r = await fetch(`${API}/api/admin/login`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ phone, password: pass }),
+    });
+    sp.style.display='none';
+    if (!r.ok) { errEl.style.display='block'; return; }
+    document.getElementById('admin-login-panel').classList.add('hidden');
+    document.getElementById('admin-dashboard').classList.remove('hidden');
+    loadAdminData();
+  } catch {
+    sp.style.display='none'; errEl.textContent='שגיאת שרת'; errEl.style.display='block';
+  }
+}
+
+function switchAdminTab(tab) {
+  document.querySelectorAll('.admin-tab').forEach((t,i) => {
+    const tabs = ['courses','users','stats'];
+    t.classList.toggle('active', tabs[i]===tab);
+  });
+  document.getElementById('admin-tab-courses').classList.toggle('hidden', tab!=='courses');
+  document.getElementById('admin-tab-users').classList.toggle('hidden',   tab!=='users');
+  document.getElementById('admin-tab-stats').classList.toggle('hidden',   tab!=='stats');
+  if (tab === 'users' || tab === 'stats') loadAdminData();
+}
+
+async function loadAdminData() {
+  // Load fresh curriculum
+  try {
+    const r = await fetch(`${API}/api/curriculum`);
+    if (r.ok) { curriculum = await r.json(); renderCourseTree(); }
+  } catch {}
+
+  try {
+    const r = await fetch(`${API}/api/admin/stats`);
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('admin-stats-grid').innerHTML = `
+      <div class="admin-stat"><div class="admin-stat-num">${d.totalUsers}</div><div class="admin-stat-label">משתמשים</div></div>
+      <div class="admin-stat"><div class="admin-stat-num">${d.totalPurchases}</div><div class="admin-stat-label">רכישות</div></div>
+      <div class="admin-stat"><div class="admin-stat-num">${d.bySolo}</div><div class="admin-stat-label">סולו</div></div>
+      <div class="admin-stat"><div class="admin-stat-num">${d.byMentor}</div><div class="admin-stat-label">מנטור</div></div>`;
+    const ul = document.getElementById('admin-user-list');
+    ul.innerHTML = d.recentUsers.length ? d.recentUsers.map(u => {
+      const init = (u.name||u.email||u.phone||'?')[0].toUpperCase();
+      const pc   = u.plan==='מנטור'?'pill-mentor':u.plan==='כיתה'?'pill-class':'pill-solo';
+      const tid  = u.telegram_id || '';
+      return `<div class="admin-user-row">
+        <div class="admin-user-avatar">${init}</div>
+        <div class="admin-user-info">
+          <div class="admin-user-name">${u.name||'—'}</div>
+          <div class="admin-user-meta">${u.email||u.phone||u.telegram_id}</div>
+        </div>
+        <span class="plan-pill ${pc}">${u.plan}</span>
+        <button class="tree-btn" onclick="openUserEdit('${tid}','${u.plan||'סולו'}','${(u.name||'').replace(/'/g,'')}')">✏️</button>
+      </div>`;
+    }).join('') : '<div style="color:var(--text-3);font-size:13px">אין משתמשים עדיין</div>';
+  } catch {}
+}
+
+// ── USER EDIT ─────────────────────────────────────────────
+function openUserEdit(telegramId, currentPlan, name) {
+  const overlay = document.getElementById('edit-overlay');
+  const title   = document.getElementById('edit-sheet-title');
+  const body    = document.getElementById('edit-sheet-body');
+  editContext = { type: 'edit-user', id: telegramId };
+  overlay.classList.add('open');
+  title.textContent = `✏️ עריכת משתמש: ${name||telegramId}`;
+  body.innerHTML = `
+    <div class="form-group">
+      <label class="form-label">מסלול</label>
+      <select class="form-input" id="ef-user-plan">
+        <option value="סולו"${currentPlan==='סולו'?' selected':''}>📘 סולו</option>
+        <option value="כיתה"${currentPlan==='כיתה'?' selected':''}>🎓 כיתה</option>
+        <option value="מנטור"${currentPlan==='מנטור'?' selected':''}>⭐ מנטור</option>
+      </select>
+    </div>
+    <button class="btn" onclick="saveUserEdit()">עדכן מסלול</button>`;
+}
+
+async function saveUserEdit() {
+  const plan = document.getElementById('ef-user-plan')?.value;
+  const tid  = editContext.id;
+  if (!plan || !tid) return;
+  const r = await fetch(`${API}/api/admin/users/${tid}`, {
+    method: 'PUT', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ plan }),
+  });
+  if (r.ok) { showToast('מסלול עודכן ✓'); closeEditSheet(); loadAdminData(); }
+  else showToast('שגיאה בעדכון');
+}
+
+// ── COURSE TREE ──────────────────────────────────────────
+function renderCourseTree() {
+  const tree = document.getElementById('course-tree');
+  tree.innerHTML = '';
+  curriculum.forEach((c, ci) => {
+    const div = document.createElement('div');
+    div.className = 'tree-course';
+    div.innerHTML = `
+      <div class="tree-course-head" onclick="toggleTree('course-${ci}')">
+        <span class="tree-emoji">${c.emoji}</span>
+        <span class="tree-course-name">${c.name}</span>
+        <div class="tree-actions" onclick="event.stopPropagation()">
+          <button class="tree-btn add" onclick="openEditSheet('new-chapter','${c.id}')">+</button>
+          <button class="tree-btn" onclick="openEditSheet('edit-course','${c.id}')">✏️</button>
+          <button class="tree-btn danger" onclick="confirmDelete('course','${c.id}')">🗑</button>
+        </div>
+      </div>
+      <div class="tree-chapters" id="course-${ci}" style="display:none">
+        ${c.chapters.map((ch,chi) => `
+          <div class="tree-chapter" id="chapter-wrap-${ci}-${chi}">
+            <div class="tree-chapter-head" onclick="toggleTree('chapter-${ci}-${chi}')">
+              <div class="tree-chapter-num">${chi+1}</div>
+              <span class="tree-chapter-name">${ch.title}</span>
+              <div class="tree-actions" onclick="event.stopPropagation()">
+                <button class="tree-btn add" onclick="openEditSheet('new-lesson','${ch.id}')">+</button>
+                <button class="tree-btn" onclick="openEditSheet('edit-chapter','${ch.id}')">✏️</button>
+                <button class="tree-btn danger" onclick="confirmDelete('chapter','${ch.id}')">🗑</button>
+              </div>
+            </div>
+            <div class="tree-lessons" id="chapter-${ci}-${chi}" style="display:none">
+              ${ch.lessons.map((ls,li) => `
+                <div class="tree-lesson" onclick="openEditSheet('edit-lesson','${ls.id}')">
+                  <div class="tree-lesson-num">${li+1}</div>
+                  <span class="tree-lesson-name">${ls.title}</span>
+                  ${ls.video_url?'<div class="tree-has-video">▶</div>':''}
+                  <div class="tree-actions" onclick="event.stopPropagation()">
+                    <button class="tree-btn danger" onclick="confirmDelete('lesson','${ls.id}')">🗑</button>
+                  </div>
+                </div>`).join('')}
+              <div class="tree-quiz-row" onclick="openEditSheet('edit-quiz','${ch.id}')">
+                <span class="tree-quiz-badge">📝</span>
+                <span class="tree-quiz-name">${ch.quiz?.title||'מבחן מסכם'} (${JSON.parse(ch.quiz?.questions||'[]').length} שאלות)</span>
+                <button class="tree-btn" onclick="event.stopPropagation();openEditSheet('edit-quiz','${ch.id}')">✏️</button>
+              </div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+    tree.appendChild(div);
+  });
+}
+
+function toggleTree(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// ── EDIT SHEET ───────────────────────────────────────────
+let editContext = {};
+
+function openEditSheet(type, id) {
+  editContext = { type, id };
+  const overlay = document.getElementById('edit-overlay');
+  const title   = document.getElementById('edit-sheet-title');
+  const body    = document.getElementById('edit-sheet-body');
+  overlay.classList.add('open');
+
+  if (type === 'new-course') {
+    title.textContent = '+ קורס חדש';
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">מזהה (ייחודי)</label><input class="form-input" id="ef-id" placeholder="e.g. חטיבה-שנה-ב"></div>
+      <div class="form-group"><label class="form-label">שם הקורס</label><input class="form-input" id="ef-name" placeholder="חטיבה → שנה ב"></div>
+      <div class="form-group"><label class="form-label">אימוג'י</label><input class="form-input" id="ef-emoji" value="📚"></div>
+      <div class="form-group"><label class="form-label">מטא (כמות שיעורים וכו')</label><input class="form-input" id="ef-meta" placeholder="32 שיעורים · הכנה מלאה"></div>
+      <button class="btn" onclick="saveEdit()">שמור קורס</button>`;
+  }
+  else if (type === 'edit-course') {
+    const c = curriculum.find(c => c.id === id);
+    title.textContent = `עריכת קורס: ${c?.name||id}`;
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">שם הקורס</label><input class="form-input" id="ef-name" value="${c?.name||''}"></div>
+      <div class="form-group"><label class="form-label">אימוג'י</label><input class="form-input" id="ef-emoji" value="${c?.emoji||'📚'}"></div>
+      <div class="form-group"><label class="form-label">מטא</label><input class="form-input" id="ef-meta" value="${c?.meta||''}"></div>
+      <button class="btn" onclick="saveEdit()">עדכן</button>`;
+  }
+  else if (type === 'new-chapter') {
+    title.textContent = '+ פרק חדש';
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">מזהה פרק</label><input class="form-input" id="ef-id" placeholder="e.g. ch_algebra2"></div>
+      <div class="form-group"><label class="form-label">כותרת</label><input class="form-input" id="ef-title" placeholder="אלגברה מתקדמת"></div>
+      <button class="btn" onclick="saveEdit()">שמור פרק</button>`;
+  }
+  else if (type === 'edit-chapter') {
+    let ch = null;
+    for (const c of curriculum) { ch = c.chapters.find(ch=>ch.id===id); if(ch)break; }
+    title.textContent = `עריכת פרק: ${ch?.title||id}`;
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">כותרת</label><input class="form-input" id="ef-title" value="${ch?.title||''}"></div>
+      <button class="btn" onclick="saveEdit()">עדכן</button>`;
+  }
+  else if (type === 'new-lesson') {
+    title.textContent = '+ שיעור חדש';
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">מזהה שיעור</label><input class="form-input" id="ef-id" placeholder="e.g. ls_123"></div>
+      <div class="form-group"><label class="form-label">כותרת</label><input class="form-input" id="ef-title" placeholder="נושא השיעור"></div>
+      <div class="form-group"><label class="form-label">תיאור</label><textarea class="form-input" id="ef-desc" placeholder="הסבר קצר על השיעור"></textarea></div>
+      <div class="form-group"><label class="form-label">קישור וידאו (Dropbox)</label><input class="form-input" id="ef-video" placeholder="https://www.dropbox.com/s/..." dir="ltr"></div>
+      <div class="form-group"><label class="form-label">תגיות (אחת בשורה)</label><textarea class="form-input" id="ef-tags" placeholder="תיאוריה&#10;תרגול" style="min-height:60px"></textarea></div>
+      <div class="form-group"><label class="form-label">תרגילים (אחד בשורה)</label><textarea class="form-input" id="ef-exercises" placeholder="פתור: ..." style="min-height:80px"></textarea></div>
+      <div class="form-group"><label class="form-label">שיעורי בית (אחד בשורה)</label><textarea class="form-input" id="ef-homework" placeholder="דף תרגול..." style="min-height:60px"></textarea></div>
+      <button class="btn" onclick="saveEdit()">שמור שיעור</button>`;
+  }
+  else if (type === 'edit-lesson') {
+    let ls = null;
+    for (const c of curriculum) { for (const ch of c.chapters) { ls = ch.lessons.find(l=>l.id===id); if(ls)break; } if(ls)break; }
+    title.textContent = `✏️ ${ls?.title||id}`;
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">כותרת</label><input class="form-input" id="ef-title" value="${ls?.title||''}"></div>
+      <div class="form-group"><label class="form-label">תיאור</label><textarea class="form-input" id="ef-desc">${ls?.description||''}</textarea></div>
+      <div class="form-group"><label class="form-label">🎬 קישור וידאו Dropbox</label><input class="form-input" id="ef-video" value="${ls?.video_url||''}" dir="ltr" placeholder="https://www.dropbox.com/s/..."></div>
+      <div class="form-group"><label class="form-label">תגיות (אחת בשורה)</label><textarea class="form-input" id="ef-tags" style="min-height:55px">${(ls?.tags||[]).join('\n')}</textarea></div>
+      <div class="form-group"><label class="form-label">תרגילים (אחד בשורה)</label><textarea class="form-input" id="ef-exercises" style="min-height:100px">${(ls?.exercises||[]).join('\n')}</textarea></div>
+      <div class="form-group"><label class="form-label">שיעורי בית (אחד בשורה)</label><textarea class="form-input" id="ef-homework" style="min-height:80px">${(ls?.homework||[]).join('\n')}</textarea></div>
+      <button class="btn" onclick="saveEdit()">עדכן שיעור</button>
+      <button class="btn btn-red" style="margin-top:8px" onclick="confirmDelete('lesson','${id}')">🗑 מחק שיעור</button>`;
+  }
+  else if (type === 'edit-quiz') {
+    let ch = null; let courseId = null;
+    for (const c of curriculum) { ch = c.chapters.find(ch=>ch.id===id); if(ch){courseId=c.id;break;} }
+    const questions = JSON.parse(ch?.quiz?.questions||'[]');
+    title.textContent = `📝 ${ch?.quiz?.title||'מבחן מסכם'}`;
+    let qHtml = questions.map((q,qi) => buildQuizQEditor(q, qi)).join('');
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">כותרת המבחן</label><input class="form-input" id="ef-quiz-title" value="${ch?.quiz?.title||'מבחן מסכם'}"></div>
+      <div id="quiz-editor-list">${qHtml}</div>
+      <button class="edit-add-btn" onclick="addQuizQuestion()">+ הוסף שאלה</button>
+      <button class="btn" style="margin-top:12px" onclick="saveQuiz('${id}')">שמור מבחן</button>`;
+  }
+}
+
+function buildQuizQEditor(q = {}, qi) {
+  const opts = q.options || ['','','',''];
+  const answer = q.answer ?? 0;
+  return `
+    <div class="quiz-q-editor" id="qq-${qi}">
+      <div class="quiz-q-editor-head">
+        <span class="quiz-q-num">שאלה ${qi+1}</span>
+        <button class="tree-btn danger" style="margin-right:auto" onclick="removeQuizQ(${qi})">🗑</button>
+      </div>
+      <div class="form-group" style="margin-bottom:8px">
+        <input class="form-input" id="qq-text-${qi}" value="${q.q||''}" placeholder="טקסט השאלה...">
+      </div>
+      ${opts.map((opt,oi) => `
+        <div class="quiz-opt-row">
+          <div class="quiz-opt-radio${oi===answer?' is-answer':''}" id="qq-radio-${qi}-${oi}" onclick="setAnswer(${qi},${oi})">${oi===answer?'✓':''}</div>
+          <input class="form-input" id="qq-opt-${qi}-${oi}" value="${opt}" placeholder="תשובה ${oi+1}" style="flex:1;padding:8px 10px;font-size:13px">
+        </div>`).join('')}
+    </div>`;
+}
+
+function addQuizQuestion() {
+  const list = document.getElementById('quiz-editor-list');
+  const count = list.querySelectorAll('.quiz-q-editor').length;
+  const div = document.createElement('div');
+  div.innerHTML = buildQuizQEditor({q:'',options:['','',''],answer:0}, count);
+  list.appendChild(div.firstElementChild);
+}
+
+function removeQuizQ(qi) {
+  const el = document.getElementById(`qq-${qi}`);
+  if (el) el.remove();
+}
+
+let quizEditorAnswers = {};
+function setAnswer(qi, oi) {
+  quizEditorAnswers[qi] = oi;
+  // update radio visuals
+  const opts = document.querySelectorAll(`[id^="qq-radio-${qi}-"]`);
+  opts.forEach((r, i) => {
+    r.classList.toggle('is-answer', i === oi);
+    r.textContent = i === oi ? '✓' : '';
+  });
+}
+
+async function saveQuiz(chapterId) {
+  const titleEl = document.getElementById('ef-quiz-title');
+  const title = titleEl?.value || 'מבחן מסכם';
+  const editors = document.querySelectorAll('.quiz-q-editor');
+  const questions = [];
+  editors.forEach((ed, qi) => {
+    const qText = document.getElementById(`qq-text-${qi}`)?.value || '';
+    const opts  = [0,1,2,3].map(oi => document.getElementById(`qq-opt-${qi}-${oi}`)?.value || '').filter(v=>v);
+    const ans   = quizEditorAnswers[qi] ?? 0;
+    questions.push({ q: qText, options: opts, answer: ans });
+  });
+
+  const r = await fetch(`${API}/api/admin/quizzes/${chapterId}`, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ title, questions }),
+  });
+  if (r.ok) { showToast('מבחן נשמר ✓'); closeEditSheet(); loadAdminData(); }
+  else showToast('שגיאה בשמירה');
+}
+
+async function saveEdit() {
+  const { type, id } = editContext;
+  let r;
+
+  if (type === 'new-course') {
+    const bid = document.getElementById('ef-id')?.value.trim();
+    const name = document.getElementById('ef-name')?.value.trim();
+    const emoji = document.getElementById('ef-emoji')?.value.trim();
+    const meta  = document.getElementById('ef-meta')?.value.trim();
+    if (!bid || !name) return showToast('חסרים פרטים');
+    r = await fetch(`${API}/api/admin/courses`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:bid,name,emoji,meta}) });
+  }
+  else if (type === 'edit-course') {
+    const name  = document.getElementById('ef-name')?.value.trim();
+    const emoji = document.getElementById('ef-emoji')?.value.trim();
+    const meta  = document.getElementById('ef-meta')?.value.trim();
+    r = await fetch(`${API}/api/admin/courses/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,emoji,meta}) });
+  }
+  else if (type === 'new-chapter') {
+    const cid   = document.getElementById('ef-id')?.value.trim();
+    const title = document.getElementById('ef-title')?.value.trim();
+    if (!cid || !title) return showToast('חסרים פרטים');
+    r = await fetch(`${API}/api/admin/chapters`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:cid, course_id:id, title}) });
+  }
+  else if (type === 'edit-chapter') {
+    const title = document.getElementById('ef-title')?.value.trim();
+    r = await fetch(`${API}/api/admin/chapters/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title}) });
+  }
+  else if (type === 'new-lesson') {
+    const lid   = document.getElementById('ef-id')?.value.trim();
+    const title = document.getElementById('ef-title')?.value.trim();
+    if (!lid || !title) return showToast('חסרים פרטים');
+    const desc  = document.getElementById('ef-desc')?.value.trim();
+    const video = document.getElementById('ef-video')?.value.trim();
+    const tags  = (document.getElementById('ef-tags')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    const exs   = (document.getElementById('ef-exercises')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    const hw    = (document.getElementById('ef-homework')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    r = await fetch(`${API}/api/admin/lessons`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:lid, chapter_id:id, title, description:desc, video_url:video, tags, exercises:exs, homework:hw}) });
+  }
+  else if (type === 'edit-lesson') {
+    const title = document.getElementById('ef-title')?.value.trim();
+    const desc  = document.getElementById('ef-desc')?.value.trim();
+    const video = document.getElementById('ef-video')?.value.trim();
+    const tags  = (document.getElementById('ef-tags')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    const exs   = (document.getElementById('ef-exercises')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    const hw    = (document.getElementById('ef-homework')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    r = await fetch(`${API}/api/admin/lessons/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title, description:desc, video_url:video, tags, exercises:exs, homework:hw}) });
+  }
+
+  if (r?.ok) { showToast('נשמר ✓'); closeEditSheet(); loadAdminData(); }
+  else showToast('שגיאה בשמירה');
+}
+
+async function confirmDelete(type, id) {
+  const labels = { course:'הקורס', chapter:'הפרק', lesson:'השיעור' };
+  if (!confirm(`למחוק את ${labels[type]}? לא ניתן לשחזר.`)) return;
+  const urls = { course:`/api/admin/courses/${id}`, chapter:`/api/admin/chapters/${id}`, lesson:`/api/admin/lessons/${id}` };
+  const r = await fetch(API + urls[type], { method:'DELETE' });
+  if (r.ok) { showToast('נמחק ✓'); closeEditSheet(); loadAdminData(); }
+  else showToast('שגיאה');
+}
+
+function closeEditSheet(e) {
+  if (e && e.target !== document.getElementById('edit-overlay')) return;
+  document.getElementById('edit-overlay').classList.remove('open');
+  quizEditorAnswers = {};
+}
+
+// ══════════════════════════════════════
+//  UTILITIES
+// ══════════════════════════════════════
+function syncProgress() {
+  if (!currentUser?.telegram_id) return;
+  let total = 0, done = 0;
+  curriculum.forEach(c => c.chapters.forEach(ch => ch.lessons.forEach(l => { total++; if(completedLessons[l.id]) done++; })));
+  const pct = total ? Math.round(done/total*100) : 0;
+  fetch(`${API}/api/progress`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({telegram_id:currentUser.telegram_id,progress:pct}) }).catch(()=>{});
+}
+
+function openTg(key) {
+  const url = TG_LINKS[key];
+  if (tg) tg.openTelegramLink(url); else window.open(url,'_blank');
+}
+function openUpgrade() {
+  const url = 'https://t.me/rafael_math_bot?start=upgrade';
+  if (tg) tg.openTelegramLink(url); else window.open(url,'_blank');
+}
+function openSupport() {
+  if (tg) tg.showPopup({ title:'תמיכה', message:'במה נוכל לעזור?', buttons:[{id:'upgrade',type:'default',text:'🚀 שדרוג'},{id:'cancel',type:'destructive',text:'❌ ביטול מנוי'},{id:'close',type:'close'}] },
+    btn => { if(btn==='upgrade') openUpgrade(); if(btn==='cancel') tg.openTelegramLink('https://t.me/rafael_support_bot'); });
+  else alert('תמיכה: @rafael_support_bot');
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── FULLSCREEN ───────────────────────────────────────────
+function enterFullscreen() {
+  const video = document.getElementById('lesson-video');
+  if (!video) return;
+  // iOS Safari uses webkitEnterFullscreen on the video element itself
+  if (video.webkitEnterFullscreen) { video.webkitEnterFullscreen(); return; }
+  // Standard API — try the wrapper first, fallback to video
+  const wrap = video.closest('.video-wrap') || video;
+  const req  = wrap.requestFullscreen || wrap.webkitRequestFullscreen || wrap.mozRequestFullScreen || wrap.msRequestFullscreen;
+  if (req) req.call(wrap);
+}
+
+// Anti-copy
+document.addEventListener('copy',  e => e.preventDefault());
+document.addEventListener('cut',   e => e.preventDefault());
+document.addEventListener('contextmenu', e => {
+  if (!e.target.closest('input,textarea')) e.preventDefault();
+});
+</script>
+</body>
+</html>
