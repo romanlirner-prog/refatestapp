@@ -988,10 +988,19 @@ function navTo(screen, param) {
 
   if (tgUser?.id) {
     try {
-      const r = await fetch(`${API}/api/me`, { headers: { 'x-telegram-id': String(tgUser.id) } });
-      if (r.ok) { currentUser = await r.json(); loadApp(); return; }
+      const r = await fetch(`${API}/api/me`, { headers: {
+        'x-telegram-id':       String(tgUser.id),
+        'x-telegram-name':     tgUser.first_name ? `${tgUser.first_name} ${tgUser.last_name||''}`.trim() : '',
+        'x-telegram-username': tgUser.username || ''
+      }});
+      if (r.ok) { currentUser = await r.json(); }
     } catch {}
+    // Even on network error fall through with minimal data
+    if (!currentUser) currentUser = { name: tgUser.first_name || 'משתמש', plan: 'סולו', telegram_id: String(tgUser.id) };
+    loadApp();
+    return;
   }
+  // Non-Telegram fallback (browser / admin)
   document.getElementById('screen-auth').classList.add('active');
 })();
 
@@ -1179,19 +1188,19 @@ function renderMinimap() {
   const course   = curriculum.find(c => c.id === courseId);
   if (!course) return;
 
-  // Find current (first incomplete) lesson
-  let currentLesson = null;
+  // Find current chapter (first with incomplete lesson)
+  let currentChapter = null;
   outer_loop: for (const ch of course.chapters) {
     for (const ls of ch.lessons) {
-      if (!completedLessons[ls.id]) { currentLesson = ls; break outer_loop; }
+      if (!completedLessons[ls.id]) { currentChapter = ch; break outer_loop; }
     }
   }
 
-  const allDone = !currentLesson;
+  const allDone = !currentChapter;
   const nameEl = document.getElementById('mmt-lesson-name');
-  if (nameEl) nameEl.textContent = allDone ? '✓ סיימת את הקורס!' : currentLesson.title;
+  if (nameEl) nameEl.textContent = allDone ? '✓ סיימת את הקורס!' : currentChapter.title;
   const btn = document.getElementById('mmt-continue-btn');
-  if (btn) { btn.textContent = allDone ? 'מחדש ▶' : 'המשך ▶'; }
+  if (btn) btn.textContent = allDone ? 'סיום ✓' : 'המשך ▶';
 }
 
 function renderCourses(unlockedIds) {

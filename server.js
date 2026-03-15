@@ -310,8 +310,15 @@ app.post('/api/auth', (req, res) => {
 app.get('/api/me', (req, res) => {
   const telegram_id = req.headers['x-telegram-id'];
   if (!telegram_id) return res.status(400).json({ error: 'missing' });
-  const user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegram_id);
-  if (!user) return res.status(404).json({ error: 'not_found' });
+  let user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegram_id);
+  if (!user) {
+    // Auto-register new Telegram user with free plan
+    const tg_name     = req.headers['x-telegram-name']     || null;
+    const tg_username = req.headers['x-telegram-username'] || null;
+    db.prepare('INSERT OR IGNORE INTO users (telegram_id,name,username,plan) VALUES (?,?,?,?)')
+      .run(telegram_id, tg_name, tg_username, 'סולו');
+    user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegram_id);
+  }
   res.json(user);
 });
 
