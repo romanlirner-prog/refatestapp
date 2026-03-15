@@ -14,7 +14,8 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 // ─── DB ────────────────────────────────────────────────────────────────
-const db = new DatabaseSync(path.join(__dirname, 'miniapp.db'));
+const DB_PATH = process.env.VERCEL ? '/tmp/miniapp.db' : path.join(__dirname, 'miniapp.db');
+const db = new DatabaseSync(DB_PATH);
 db.exec('PRAGMA journal_mode = WAL');
 
 db.exec(`
@@ -494,5 +495,9 @@ if (process.env.NODE_ENV !== 'production') {
 })();
 
 // ─── START ────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 3458;
-app.listen(PORT, () => console.log(`✅  Mini App server → http://localhost:${PORT}`));
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3458;
+  app.listen(PORT, () => console.log(`✅  Mini App server → http://localhost:${PORT}`));
+}
+
+module.exports = app;
