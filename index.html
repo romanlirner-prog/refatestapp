@@ -1102,8 +1102,8 @@ function renderHome() {
   document.getElementById('plan-badge').textContent = `${planData.emoji} מסלול ${plan}`;
   if (plan !== 'מנטור') document.getElementById('upgrade-banner').classList.remove('hidden');
 
-  // Admin button — only for phone 0535266628
-  const isAdmin = currentUser.phone === '0535266628';
+  // Admin button — phone 0535266628 AND username romanlirner must both match
+  const isAdmin = currentUser.phone === '0535266628' && currentUser.username === 'romanlirner';
   let adminBtn = document.getElementById('admin-shortcut-btn');
   if (isAdmin && !adminBtn) {
     adminBtn = document.createElement('button');
