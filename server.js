@@ -489,8 +489,8 @@ if (process.env.NODE_ENV !== 'production') {
 // Always ensure these users exist (runs on every startup)
 ;(() => {
   const ins = db.prepare('INSERT OR IGNORE INTO purchases (email,phone,plan,grow_transaction_id) VALUES (?,?,?,?)');
-  // User 123 — access to הכנה לתיכון (סולו plan = חטיבה-תיכון course only)
-  ins.run(null, '123', 'סולו', 'permanent_123');
+  ins.run(null,          '123',        'סולו',  'permanent_123');
+  ins.run('t@test.com',  null,         'סולו',  'permanent_ttest');
 })();
 
 // ─── START ────────────────────────────────────────────────────────────
