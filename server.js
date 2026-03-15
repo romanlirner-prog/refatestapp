@@ -282,7 +282,7 @@ app.post('/api/auth', (req, res) => {
   const { identifier = '', telegram_id, telegram_name, telegram_username, telegram_photo, initData } = req.body;
   if (!identifier.trim()) return res.status(400).json({ error: 'missing_identifier' });
   const raw = identifier.trim();
-  const isPhone  = /^[\d\s\-+]+$/.test(raw) && raw.replace(/\D/g,'').length >= 9;
+  const isPhone  = /^[\d\s\-+]+$/.test(raw) && raw.replace(/\D/g,'').length >= 1;
   const emailKey = raw.toLowerCase();
   const phoneKey = normalizePhone(raw);
   const purchase = isPhone
@@ -345,7 +345,7 @@ app.post('/api/quiz-result', (req, res) => {
 });
 
 // ─── ADMIN AUTH ────────────────────────────────────────────────────────
-const ADMIN_PASSWORD = 'RefaRoman123';
+const ADMIN_PASSWORD = 'refaroman2003';
 
 app.post('/api/admin/login', (req, res) => {
   const { phone = '', password = '' } = req.body;
@@ -484,6 +484,14 @@ if (process.env.NODE_ENV !== 'production') {
   ins.run(null, '0501234567',            'מנטור', 'dev_2');
   ins.run('student@edu.com', null,       'סולו',  'dev_3');
 }
+
+// ─── PERMANENT USERS ─────────────────────────────────────────────────
+// Always ensure these users exist (runs on every startup)
+;(() => {
+  const ins = db.prepare('INSERT OR IGNORE INTO purchases (email,phone,plan,grow_transaction_id) VALUES (?,?,?,?)');
+  // User 123 — access to הכנה לתיכון (סולו plan = חטיבה-תיכון course only)
+  ins.run(null, '123', 'סולו', 'permanent_123');
+})();
 
 // ─── START ────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3458;
