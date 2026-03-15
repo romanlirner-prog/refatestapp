@@ -360,13 +360,19 @@ async function syncToGitHub(data) {
   } catch (e) { console.error('[GitHub sync]', e.message); }
 }
 
+// Debounce GitHub sync: batch rapid saves into one commit (max 1 deploy per 30s)
+let _ghSyncTimer = null;
 function writeCurriculumJson() {
   try {
     const data = normalizeCurriculumData(getCurriculum());
     // Write locally (works on dev, silently fails on Vercel read-only fs — that's OK)
     try { fs.writeFileSync(CURRICULUM_JSON, JSON.stringify(data, null, 2), 'utf8'); } catch {}
-    // Push to GitHub so Vercel redeployment seeds DB with correct data
-    syncToGitHub(data).catch(e => console.error('[GitHub sync]', e.message));
+    // Debounced push to GitHub — waits 30s after last save before committing
+    if (_ghSyncTimer) clearTimeout(_ghSyncTimer);
+    _ghSyncTimer = setTimeout(() => {
+      const latest = normalizeCurriculumData(getCurriculum());
+      syncToGitHub(latest).catch(e => console.error('[GitHub sync]', e.message));
+    }, 30_000);
   } catch (e) { console.error('[writeCurriculumJson]', e.message); }
 }
 
