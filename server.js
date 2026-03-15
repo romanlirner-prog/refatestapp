@@ -363,19 +363,14 @@ async function syncToGitHub(data) {
   } catch (e) { console.error('[GitHub sync]', e.message); }
 }
 
-// Debounce GitHub sync: batch rapid saves into one commit (max 1 deploy per 30s)
-let _ghSyncTimer = null;
-function writeCurriculumJson() {
+// Sync curriculum to GitHub immediately (awaited before response — safe on Vercel serverless)
+async function writeCurriculumJson() {
   try {
     const data = normalizeCurriculumData(getCurriculum());
     // Write locally (works on dev, silently fails on Vercel read-only fs — that's OK)
     try { fs.writeFileSync(CURRICULUM_JSON, JSON.stringify(data, null, 2), 'utf8'); } catch {}
-    // Debounced push to GitHub — waits 30s after last save before committing
-    if (_ghSyncTimer) clearTimeout(_ghSyncTimer);
-    _ghSyncTimer = setTimeout(() => {
-      const latest = normalizeCurriculumData(getCurriculum());
-      syncToGitHub(latest).catch(e => console.error('[GitHub sync]', e.message));
-    }, 30_000);
+    // Push to GitHub synchronously — must complete before serverless function terminates
+    await syncToGitHub(data);
   } catch (e) { console.error('[writeCurriculumJson]', e.message); }
 }
 
@@ -501,24 +496,24 @@ app.get('/api/admin/stats', (req, res) => {
 // Courses
 app.get('/api/admin/courses', (req, res) => res.json(getCurriculum()));
 
-app.post('/api/admin/courses', (req, res) => {
+app.post('/api/admin/courses', async (req, res) => {
   const { id, name, emoji='📚', color='ct-blue', meta='' } = req.body;
   if (!id || !name) return res.status(400).json({ error: 'id and name required' });
   const n = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
   db.prepare('INSERT INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)').run(id,name,emoji,color,meta,n);
-  writeCurriculumJson();
+  await writeCurriculumJson();
   res.json({ ok: true });
 });
 
-app.put('/api/admin/courses/:id', (req, res) => {
+app.put('/api/admin/courses/:id', async (req, res) => {
   const { name, emoji, color, meta, sort_order } = req.body;
   db.prepare('UPDATE courses SET name=COALESCE(?,name), emoji=COALESCE(?,emoji), color=COALESCE(?,color), meta=COALESCE(?,meta), sort_order=COALESCE(?,sort_order) WHERE id=?')
     .run(name||null, emoji||null, color||null, meta||null, sort_order??null, req.params.id);
-  writeCurriculumJson();
+  await writeCurriculumJson();
   res.json({ ok: true });
 });
 
-app.delete('/api/admin/courses/:id', (req, res) => {
+app.delete('/api/admin/courses/:id', async (req, res) => {
   const cid = req.params.id;
   const chapters = db.prepare('SELECT id FROM chapters WHERE course_id=?').all(cid);
   for (const ch of chapters) {
@@ -527,48 +522,48 @@ app.delete('/api/admin/courses/:id', (req, res) => {
   }
   db.prepare('DELETE FROM chapters WHERE course_id=?').run(cid);
   db.prepare('DELETE FROM courses WHERE id=?').run(cid);
-  writeCurriculumJson();
+  await writeCurriculumJson();
   res.json({ ok: true });
 });
 
 // Chapters
-app.post('/api/admin/chapters', (req, res) => {
+app.post('/api/admin/chapters', async (req, res) => {
   const { id, course_id, title } = req.body;
   if (!id || !course_id || !title) return res.status(400).json({ error: 'missing fields' });
   const n = db.prepare('SELECT COUNT(*) as n FROM chapters WHERE course_id=?').get(course_id).n;
   db.prepare('INSERT INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)').run(id,course_id,title,n);
-  writeCurriculumJson();
+  await writeCurriculumJson();
   res.json({ ok: true });
 });
 
-app.put('/api/admin/chapters/:id', (req, res) => {
+app.put('/api/admin/chapters/:id', async (req, res) => {
   const { title, sort_order } = req.body;
   db.prepare('UPDATE chapters SET title=COALESCE(?,title), sort_order=COALESCE(?,sort_order) WHERE id=?').run(title||null, sort_order??null, req.params.id);
-  writeCurriculumJson();
+  await writeCurriculumJson();
   res.json({ ok: true });
 });
 
-app.delete('/api/admin/chapters/:id', (req, res) => {
+app.delete('/api/admin/chapters/:id', async (req, res) => {
   const cid = req.params.id;
   db.prepare('DELETE FROM lessons WHERE chapter_id=?').run(cid);
   db.prepare('DELETE FROM quizzes WHERE chapter_id=?').run(cid);
   db.prepare('DELETE FROM chapters WHERE id=?').run(cid);
-  writeCurriculumJson();
+  await writeCurriculumJson();
   res.json({ ok: true });
 });
 
 // Lessons
-app.post('/api/admin/lessons', (req, res) => {
+app.post('/api/admin/lessons', async (req, res) => {
   const { id, chapter_id, title, description='', video_url='', tags=[], exercises=[], homework=[] } = req.body;
   if (!id || !chapter_id || !title) return res.status(400).json({ error: 'missing fields' });
   const n = db.prepare('SELECT COUNT(*) as n FROM lessons WHERE chapter_id=?').get(chapter_id).n;
   db.prepare('INSERT INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
     .run(id,chapter_id,title,description,video_url,JSON.stringify(tags),JSON.stringify(exercises),JSON.stringify(homework),n);
-  writeCurriculumJson();
+  await writeCurriculumJson();
   res.json({ ok: true });
 });
 
-app.put('/api/admin/lessons/:id', (req, res) => {
+app.put('/api/admin/lessons/:id', async (req, res) => {
   const { title, description, video_url, tags, exercises, homework, sort_order } = req.body;
   db.prepare(`UPDATE lessons SET
     title=COALESCE(?,title), description=COALESCE(?,description),
@@ -582,18 +577,18 @@ app.put('/api/admin/lessons/:id', (req, res) => {
       homework?JSON.stringify(homework):null,
       sort_order??null, req.params.id
     );
-  writeCurriculumJson();
+  await writeCurriculumJson();
   res.json({ ok: true });
 });
 
-app.delete('/api/admin/lessons/:id', (req, res) => {
+app.delete('/api/admin/lessons/:id', async (req, res) => {
   db.prepare('DELETE FROM lessons WHERE id=?').run(req.params.id);
-  writeCurriculumJson();
+  await writeCurriculumJson();
   res.json({ ok: true });
 });
 
 // Quizzes
-app.put('/api/admin/quizzes/:chapter_id', (req, res) => {
+app.put('/api/admin/quizzes/:chapter_id', async (req, res) => {
   const { title, questions } = req.body;
   const existing = db.prepare('SELECT id FROM quizzes WHERE chapter_id=?').get(req.params.chapter_id);
   if (existing) {
@@ -603,7 +598,7 @@ app.put('/api/admin/quizzes/:chapter_id', (req, res) => {
     const id = 'qz_' + Date.now();
     db.prepare('INSERT INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)').run(id, req.params.chapter_id, title||'מבחן מסכם', JSON.stringify(questions||[]));
   }
-  writeCurriculumJson();
+  await writeCurriculumJson();
   res.json({ ok: true });
 });
 
