@@ -664,17 +664,27 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
 }
 .video-fullscreen-btn:active { background: rgba(0,0,0,.9); }
 
-/* Fullscreen: video fills the screen on all browsers */
-video:fullscreen, video:-webkit-full-screen, video:-moz-full-screen {
-  width: 100vw !important; height: 100vh !important;
-  max-height: 100vh !important; object-fit: contain; background: #000;
+/* Native fullscreen */
+video:fullscreen, video:-webkit-full-screen {
+  width: 100vw !important; height: 100vh !important; object-fit: contain; background: #000;
 }
-.video-wrap:fullscreen, .video-wrap:-webkit-full-screen, .video-wrap:-moz-full-screen {
+.video-wrap:fullscreen, .video-wrap:-webkit-full-screen {
   background: #000; display: flex; align-items: center; justify-content: center;
 }
-.video-wrap:fullscreen video, .video-wrap:-webkit-full-screen video, .video-wrap:-moz-full-screen video {
-  width: 100% !important; height: 100% !important;
-  max-height: 100vh !important; object-fit: contain;
+.video-wrap:fullscreen video, .video-wrap:-webkit-full-screen video {
+  width: 100% !important; height: 100% !important; object-fit: contain;
+}
+/* Fullscreen overlay (appended to body — no stacking context issues) */
+#fs-overlay {
+  position: fixed; inset: 0; z-index: 999999;
+  background: #000; display: flex; align-items: center; justify-content: center;
+}
+#fs-overlay .video-wrap {
+  width: 100vw; height: 100vh; max-width: none; border-radius: 0;
+  display: flex; align-items: center; justify-content: center; background: #000;
+}
+#fs-overlay .video-wrap video {
+  width: 100% !important; height: 100% !important; object-fit: contain;
 }
 
 /* Toast */
@@ -1016,7 +1026,13 @@ let completedQuizzes = JSON.parse(localStorage.getItem('completedQuizzes')  || '
 // ══════════════════════════════════════
 //  NAV
 // ══════════════════════════════════════
+function pauseAllVideos() {
+  document.querySelectorAll('video').forEach(v => { if (!v.paused) v.pause(); });
+  closeFsOverlay();
+}
+
 function navTo(screen, param) {
+  pauseAllVideos();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + screen).classList.add('active');
   window.scrollTo(0, 0);
@@ -1409,7 +1425,7 @@ function openLesson(courseId, chapterId, lessonId) {
   if (ls.video_url) {
     const src = fixVideoUrl(ls.video_url);
     vc.innerHTML = `
-      <div class="video-wrap">
+      <div class="video-wrap" ondblclick="toggleFullscreen(this)">
         <video id="lesson-video" controls controlslist="nodownload" playsinline
           oncontextmenu="return false">
           <source src="${src}" type="video/mp4">
@@ -1444,6 +1460,7 @@ function openLesson(courseId, chapterId, lessonId) {
 }
 
 function gotoStep(n) {
+  pauseAllVideos();
   const panels = ['panel-video','panel-exercises','panel-homework'];
   const tabs   = ['tab-video','tab-exercises','tab-homework'];
   panels.forEach((p,i) => document.getElementById(p).classList.toggle('active', i===n));
@@ -2121,31 +2138,64 @@ function showToast(msg) {
 }
 
 // ── FULLSCREEN ───────────────────────────────────────────
+function closeFsOverlay() {
+  const overlay = document.getElementById('fs-overlay');
+  if (!overlay) return;
+  overlay._cleanup?.();
+  // Move wrap back to its placeholder
+  const { _wrap, _ph } = overlay;
+  if (_wrap && _ph && _ph.parentNode) {
+    _ph.parentNode.insertBefore(_wrap, _ph);
+    _ph.remove();
+  }
+  overlay.remove();
+  // Exit native fullscreen if active
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+  }
+}
+
+function openFsOverlay(wrap) {
+  if (document.getElementById('fs-overlay')) return;
+  // Put a placeholder where the wrap was
+  const ph = document.createElement('div');
+  wrap.parentNode.insertBefore(ph, wrap);
+  // Build overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'fs-overlay';
+  overlay._wrap = wrap;
+  overlay._ph   = ph;
+  overlay.appendChild(wrap);
+  document.body.appendChild(overlay);
+  // ESC / dblclick to close
+  const onKey = e => { if (e.key === 'Escape') closeFsOverlay(); };
+  document.addEventListener('keydown', onKey);
+  overlay.addEventListener('dblclick', e => { if (e.target === overlay) closeFsOverlay(); });
+  overlay._cleanup = () => document.removeEventListener('keydown', onKey);
+}
+
 function toggleFullscreen(btn) {
-  // Exit fullscreen
-  const fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
-  if (fsEl) {
-    (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen)?.call(document);
+  const wrap = btn?.closest?.('.video-wrap')
+    || document.querySelector('#panel-video .video-wrap')
+    || document.querySelector('.video-wrap');
+  if (!wrap) return;
+
+  // Exit if already in overlay or native fullscreen
+  if (document.getElementById('fs-overlay')) { closeFsOverlay(); return; }
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
     return;
   }
-  const video = btn instanceof HTMLButtonElement
-    ? btn.closest('.video-wrap')?.querySelector('video')
-    : document.getElementById('lesson-video');
-  if (!video) return;
-  // Try video element directly — best native fullscreen on desktop
-  const tryFs = (el, method) => {
-    if (!el[method]) return false;
-    try { el[method](); return true; } catch { return false; }
-  };
-  if (tryFs(video, 'requestFullscreen'))       return;
-  if (tryFs(video, 'webkitRequestFullscreen')) return;
-  if (tryFs(video, 'mozRequestFullScreen'))    return;
-  // iOS Safari: must use webkitEnterFullscreen on the video element
-  if (tryFs(video, 'webkitEnterFullscreen'))   return;
-  // Last resort: fullscreen the container div
-  const wrap = video.closest('.video-wrap') || video;
-  if (tryFs(wrap, 'requestFullscreen'))        return;
-  if (tryFs(wrap, 'webkitRequestFullscreen'))  return;
+
+  // iOS Safari: native video fullscreen
+  const video = wrap.querySelector('video');
+  if (video?.webkitEnterFullscreen && !document.fullscreenEnabled) {
+    video.webkitEnterFullscreen();
+    return;
+  }
+
+  // Everything else (desktop, Telegram WebView, etc.) → overlay
+  openFsOverlay(wrap);
 }
 
 // ── VIDEO URL FIX ────────────────────────────────────────
@@ -2173,7 +2223,7 @@ function renderExerciseVideos(exercises) {
       const src = fixVideoUrl(ex.video_url);
       return `<div class="ex-video-block">
         <div class="ex-video-title">${title}</div>
-        <div class="video-wrap">
+        <div class="video-wrap" ondblclick="toggleFullscreen(this)">
           <video controls controlslist="nodownload" playsinline oncontextmenu="return false">
             <source src="${src}" type="video/mp4">
           </video>
@@ -2223,7 +2273,7 @@ function toggleSolution(i, url) {
   if (!el) return;
   if (el.classList.contains('hidden')) {
     const src = fixVideoUrl(url);
-    el.innerHTML = `<div class="video-wrap" style="margin-top:8px">
+    el.innerHTML = `<div class="video-wrap" style="margin-top:8px" ondblclick="toggleFullscreen(this)">
       <video controls controlslist="nodownload" playsinline autoplay oncontextmenu="return false">
         <source src="${src}" type="video/mp4">
       </video>
