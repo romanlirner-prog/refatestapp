@@ -92,11 +92,15 @@ db.exec(`
 try { db.exec("ALTER TABLE users ADD COLUMN completed_lessons TEXT DEFAULT '{}'"); } catch {}
 
 // ─── GITHUB ────────────────────────────────────────────────────────────
+// The data repo is separate from the code repo so deploys never overwrite content.
+// Set DATA_GITHUB_REPO=owner/repo in Vercel env vars pointing to miniapp-data repo.
+const DATA_REPO = process.env.DATA_GITHUB_REPO || process.env.GITHUB_REPO;
+
 // Writes the published snapshot to published.json on GitHub.
 // Called ONLY from the explicit push endpoint — never on individual saves.
 async function publishToGitHub(data) {
   const token = process.env.GITHUB_TOKEN;
-  const repo  = process.env.GITHUB_REPO;
+  const repo  = DATA_REPO;
   if (!token || !repo) return;
   try {
     const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
@@ -128,7 +132,7 @@ const GH_CACHE_TTL = 5000; // 5 seconds
 
 async function getGitHubCurriculum() {
   const token = process.env.GITHUB_TOKEN;
-  const repo  = process.env.GITHUB_REPO;
+  const repo  = DATA_REPO;
   if (!token || !repo) return null;
   const now = Date.now();
   if (_ghCache.data && (now - _ghCache.ts) < GH_CACHE_TTL) return _ghCache;
@@ -165,10 +169,10 @@ async function publishSnapshot() {
 // ─── SEED ──────────────────────────────────────────────────────────────
 async function seedCurriculum() {
   // תמיד ננסה לסנכרן מ-GitHub קודם
-  if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO) {
+  if (process.env.GITHUB_TOKEN && DATA_REPO) {
     try {
       const token = process.env.GITHUB_TOKEN;
-      const repo  = process.env.GITHUB_REPO;
+      const repo  = DATA_REPO;
       const res   = await fetch(`https://api.github.com/repos/${repo}/contents/published.json`, {
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
       });
