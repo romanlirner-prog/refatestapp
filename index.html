@@ -623,10 +623,10 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
 }
 .grade-tile-buy-btn {
   margin-top: auto; align-self: flex-start; display: inline-flex; align-items: center; gap: 4px;
-  background: rgba(245,158,11,.92); border-radius: 20px;
-  padding: 5px 12px; font-size: 14px; font-weight: 800; color: #000;
-  border: none; cursor: pointer; position: relative; z-index: 1;
-  font-family: 'Rubik',sans-serif;
+  background: rgba(255,255,255,.18); border-radius: 20px;
+  padding: 5px 12px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.85);
+  border: 1px solid rgba(255,255,255,.25); cursor: pointer; position: relative; z-index: 1;
+  font-family: 'Rubik',sans-serif; backdrop-filter: blur(4px);
 }
 .grade-course-row {
   display: flex; align-items: center; gap: 12px; padding: 14px;
@@ -641,9 +641,9 @@ textarea.form-input { resize: vertical; min-height: 80px; line-height: 1.6; }
 .grade-course-meta { font-size: 14px; color: var(--text-3); }
 .grade-buy-cta {
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg,#F59E0B,#EF4444); color: #fff;
-  border: none; border-radius: var(--r-sm); padding: 8px 12px;
-  font-family: 'Rubik',sans-serif; font-size: 14px; font-weight: 800;
+  background: transparent; color: var(--text-3);
+  border: 1px solid var(--border); border-radius: var(--r-sm); padding: 7px 12px;
+  font-family: 'Rubik',sans-serif; font-size: 13px; font-weight: 600;
   cursor: pointer; white-space: nowrap; flex-shrink: 0;
 }
 .grade-open-btn {
