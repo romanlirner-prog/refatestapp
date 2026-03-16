@@ -10,7 +10,7 @@ const path    = require('path');
 const fs      = require('fs');
 const { DatabaseSync } = require('node:sqlite');
 
-const CURRICULUM_JSON = path.join(__dirname, 'curriculum.json');
+const CURRICULUM_JSON = path.join(__dirname, 'curriculum.json'); // local fallback only
 
 const app = express();
 app.use(express.json());
@@ -98,7 +98,7 @@ async function syncToGitHub(data) {
   if (!token || !repo) return;
   try {
     const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
-    const apiBase = `https://api.github.com/repos/${repo}/contents/curriculum.json`;
+    const apiBase = `https://api.github.com/repos/${repo}/contents/curriculum-data.json`;
     const headers = {
       Authorization: `Bearer ${token}`,
       Accept: 'application/vnd.github+json',
@@ -112,7 +112,7 @@ async function syncToGitHub(data) {
       method: 'PUT', headers,
       body: JSON.stringify({ message: 'chore: sync curriculum via admin', content, sha })
     });
-    if (putRes.ok) console.log('[GitHub] curriculum.json synced ✓');
+    if (putRes.ok) console.log('[GitHub] curriculum-data.json synced ✓');
     else console.error('[GitHub] sync failed:', await putRes.text());
   } catch (e) { console.error('[GitHub sync]', e.message); }
 }
@@ -131,7 +131,7 @@ async function getGitHubCurriculum() {
   const now = Date.now();
   if (_ghCache.data && (now - _ghCache.ts) < GH_CACHE_TTL) return _ghCache;
   try {
-    const res = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum.json`, {
+    const res = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum-data.json`, {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
     });
     if (res.ok) {
@@ -169,7 +169,7 @@ async function seedCurriculum() {
     try {
       const token = process.env.GITHUB_TOKEN;
       const repo  = process.env.GITHUB_REPO;
-      const res   = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum.json`, {
+      const res   = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum-data.json`, {
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
       });
       if (res.ok) {
@@ -612,7 +612,7 @@ app.post('/api/admin/push', async (req, res) => {
 app.get('/api/admin/export-curriculum', async (req, res) => {
   await _seedPromise;
   const data = getCurriculum();
-  res.setHeader('Content-Disposition', 'attachment; filename="curriculum.json"');
+  res.setHeader('Content-Disposition', 'attachment; filename="curriculum-data.json"');
   res.json(data);
 });
 
