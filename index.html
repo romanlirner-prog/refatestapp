@@ -1057,6 +1057,28 @@ function navTo(screen, param) {
     if (r.ok) curriculum = await r.json();
   } catch {}
 
+  // Poll for admin changes every 30s — refresh curriculum silently if version changed
+  let _cvVersion = null;
+  setInterval(async () => {
+    try {
+      const r = await fetch(`${API}/api/curriculum-version`);
+      if (!r.ok) return;
+      const { version } = await r.json();
+      if (_cvVersion === null) { _cvVersion = version; return; }
+      if (version !== _cvVersion) {
+        _cvVersion = version;
+        const r2 = await fetch(`${API}/api/curriculum`);
+        if (r2.ok) {
+          curriculum = await r2.json();
+          // Re-render current visible screen if it shows course content
+          const active = document.querySelector('.screen.active');
+          if (active?.id === 'screen-home')    renderHome();
+          else if (active?.id === 'screen-lessons') renderLessons(currentCourseId);
+        }
+      }
+    } catch {}
+  }, 30_000);
+
   if (tgUser?.id) {
     try {
       const r = await fetch(`${API}/api/me`, { headers: {

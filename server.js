@@ -117,8 +117,12 @@ async function syncToGitHub(data) {
   } catch (e) { console.error('[GitHub sync]', e.message); }
 }
 
+// Bumped on every admin mutation — clients poll this to detect changes
+let curriculumVersion = Date.now();
+
 // Called after every admin mutation — awaited before sending response
 async function saveToGitHub() {
+  curriculumVersion = Date.now();
   try {
     const data = getCurriculum();
     // Parse quiz.questions from string to array before saving
@@ -398,6 +402,11 @@ app.post('/api/progress', (req, res) => {
 app.get('/api/curriculum', async (req, res) => {
   await _seedPromise;
   res.json(getCurriculum());
+});
+
+app.get('/api/curriculum-version', async (req, res) => {
+  await _seedPromise;
+  res.json({ version: curriculumVersion });
 });
 
 // ─── QUIZ RESULT ───────────────────────────────────────────────────────
