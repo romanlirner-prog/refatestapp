@@ -839,14 +839,14 @@ video:fullscreen, video:-webkit-full-screen {
       <div class="content-card-title">✍️ תרגילים בשיעור</div>
       <div id="exercises-list"></div>
     </div>
-    <button class="step-nav-btn" onclick="gotoStep(2)">
+    <button class="step-nav-btn" id="ex-next-btn" onclick="gotoStep(2)">
       מעבר לשיעורי בית 📚
     </button>
   </div>
 
   <!-- Step 2: Homework + Done -->
   <div class="step-panel" id="panel-homework">
-    <div class="content-card">
+    <div class="content-card" id="homework-card">
       <div class="content-card-title">📚 שיעורי בית</div>
       <div id="homework-list"></div>
     </div>
@@ -1473,11 +1473,43 @@ function openLesson(courseId, chapterId, lessonId) {
   // Description
   document.getElementById('lesson-description').textContent = ls.description || `בשיעור זה נלמד את נושא ${ls.title}.`;
 
-  // Exercises (video slots)
-  document.getElementById('exercises-list').innerHTML = renderExerciseVideos(ls.exercises || []);
+  // Show / hide exercises & homework based on actual content
+  const hasEx = (ls.exercises || []).length > 0;
+  const hasHw = (ls.homework  || []).length > 0;
 
-  // Homework with solution buttons
-  document.getElementById('homework-list').innerHTML = renderHomeworkList(ls.homework || []);
+  document.getElementById('exercises-list').innerHTML = hasEx ? renderExerciseVideos(ls.exercises) : '';
+  document.getElementById('homework-list').innerHTML  = hasHw ? renderHomeworkList(ls.homework)    : '';
+
+  // Tabs
+  document.getElementById('tab-exercises').style.display = hasEx ? '' : 'none';
+  document.getElementById('tab-homework').style.display  = hasHw ? '' : 'none';
+  document.getElementById('step-tabs').style.display     = (hasEx || hasHw) ? '' : 'none';
+
+  // Panels — exercises panel hidden when empty; homework panel always visible (contains done btn)
+  document.getElementById('panel-exercises').style.display = hasEx ? '' : 'none';
+  document.getElementById('homework-card').style.display   = hasHw ? '' : 'none';
+
+  // Video "next" button — navigate to first available step or straight to done
+  const vNext = document.getElementById('video-next-btn');
+  vNext.style.display = '';
+  if (hasEx) {
+    vNext.textContent = 'מעבר לתרגילים ✍️';
+    vNext.onclick = () => gotoStep(1);
+  } else if (hasHw) {
+    vNext.textContent = 'מעבר לשיעורי בית 📚';
+    vNext.onclick = () => gotoStep(2);
+  } else {
+    vNext.textContent = 'מעבר לסיום ✓';
+    vNext.onclick = () => gotoStep(2);
+  }
+
+  // Exercises "next" button — skip to done if no homework
+  const exNext = document.getElementById('ex-next-btn');
+  if (exNext) {
+    exNext.textContent = hasHw ? 'מעבר לשיעורי בית 📚' : 'מעבר לסיום ✓';
+    exNext.onclick = () => gotoStep(2);
+    exNext.style.display = '';
+  }
 
   // Done button
   const doneBtn = document.getElementById('done-btn');
