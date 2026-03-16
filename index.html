@@ -1057,7 +1057,7 @@ function navTo(screen, param) {
     if (r.ok) curriculum = await r.json();
   } catch {}
 
-  // Poll for admin changes every 30s — refresh curriculum silently if version changed
+  // Poll for admin changes every 2s — refresh curriculum silently if version changed
   let _cvVersion = null;
   setInterval(async () => {
     try {
@@ -1077,7 +1077,7 @@ function navTo(screen, param) {
         }
       }
     } catch {}
-  }, 30_000);
+  }, 2_000);
 
   if (tgUser?.id) {
     try {
