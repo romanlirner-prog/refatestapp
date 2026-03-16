@@ -974,40 +974,41 @@ const TG_LINKS = {
 const PLANS = {
   סולו:  { emoji:'📘', courses:['חטיבה-תיכון'] },
   כיתה:  { emoji:'🎓', courses:['חטיבה-תיכון','הכנה לבגרות'] },
-  מנטור: { emoji:'⭐', courses:['חטיבה-תיכון','הכנה לבגרות','בגרות מורחבת'] },
+  מנטור: { emoji:'⭐', courses: null }, // null = כל הקורסים מה-curriculum
 };
 
-const GRADE_MAP = [
-  {
-    id: 'grade10', label: 'כיתה י׳', heb: 'י',
-    gradient: 'linear-gradient(145deg,#0D1E3E,#1A3562)',
-    courses: [
-      { id: 'חטיבה-תיכון',  name: 'הכנה לתיכון',    emoji: '📐' },
-      { id: 'מתכונת-י',     name: 'הכנה למתכונת',   emoji: '📊' },
-    ]
-  },
-  {
-    id: 'grade11', label: 'כיתה יא׳', heb: 'יא',
-    gradient: 'linear-gradient(145deg,#0D2818,#1A4228)',
-    courses: [
-      { id: 'הכנה לבגרות',  name: 'הכנה לבגרות',    emoji: '📝' },
-      { id: 'מתכונת-יא',    name: 'הכנה למתכונת',   emoji: '📊' },
-    ]
-  },
-  {
-    id: 'grade12', label: 'כיתה יב׳', heb: 'יב',
-    gradient: 'linear-gradient(145deg,#2A1208,#3E1E0D)',
-    courses: [
-      { id: 'בגרות מורחבת', name: 'הכנה לבגרות',    emoji: '🏆' },
-      { id: 'מתכונת-יב',    name: 'הכנה למתכונת',   emoji: '📊' },
-    ]
-  },
-  {
-    id: 'all', label: 'כל הקורסים', heb: '∞',
-    gradient: 'linear-gradient(145deg,#18102A,#261848)',
-    courses: 'all'
+// Returns the unlocked course IDs for a given plan
+function getPlanCourses(plan) {
+  const p = PLANS[plan] || PLANS['סולו'];
+  return p.courses === null ? curriculum.map(c => c.id) : (p.courses || []);
+}
+
+const COLOR_GRADIENTS = {
+  'ct-blue':   'linear-gradient(145deg,#0D1E3E,#1A3562)',
+  'ct-green':  'linear-gradient(145deg,#0D2818,#1A4228)',
+  'ct-amber':  'linear-gradient(145deg,#2A1208,#3E1E0D)',
+  'ct-purple': 'linear-gradient(145deg,#1A0D2A,#2A1848)',
+  'ct-red':    'linear-gradient(145deg,#2A0D0D,#3E1818)',
+};
+
+// Built dynamically from curriculum — each admin course = one tile
+function getGradeMap() {
+  const tiles = curriculum.map(c => ({
+    id: c.id,
+    label: c.name,
+    heb: c.emoji || '📚',
+    gradient: COLOR_GRADIENTS[c.color] || COLOR_GRADIENTS['ct-blue'],
+    courses: [{ id: c.id, name: c.name, emoji: c.emoji }]
+  }));
+  if (curriculum.length > 1) {
+    tiles.push({
+      id: 'all', label: 'כל הקורסים', heb: '∞',
+      gradient: 'linear-gradient(145deg,#18102A,#261848)',
+      courses: 'all'
+    });
   }
-];
+  return tiles;
+}
 
 const tg     = window.Telegram?.WebApp;
 const tgUser = tg?.initDataUnsafe?.user;
@@ -1219,9 +1220,9 @@ function renderGradeGrid() {
   const el = document.getElementById('grade-grid');
   if (!el) return;
   const userPlan  = currentUser?.plan || 'סולו';
-  const planCourses = PLANS[userPlan]?.courses || [];
+  const planCourses = getPlanCourses(userPlan);
 
-  el.innerHTML = GRADE_MAP.map(grade => {
+  el.innerHTML = getGradeMap().map(grade => {
     const coursesArr = grade.courses === 'all'
       ? curriculum.map(c => ({ id: c.id, name: c.name, emoji: c.emoji }))
       : grade.courses;
@@ -1246,7 +1247,7 @@ function renderGradeGrid() {
 }
 
 function openGrade(gradeId) {
-  const grade = GRADE_MAP.find(g => g.id === gradeId);
+  const grade = getGradeMap().find(g => g.id === gradeId);
   if (!grade) return;
 
   const coursesArr = grade.courses === 'all'
@@ -1254,7 +1255,7 @@ function openGrade(gradeId) {
     : grade.courses;
 
   const userPlan    = currentUser?.plan || 'סולו';
-  const planCourses = PLANS[userPlan]?.courses || [];
+  const planCourses = getPlanCourses(userPlan);
 
   let html = '';
   coursesArr.forEach(gc => {
@@ -1301,7 +1302,7 @@ function openGrade(gradeId) {
 
 function renderMinimap() {
   const plan     = currentUser?.plan || 'סולו';
-  const courseId = (PLANS[plan]?.courses || [])[0];
+  const courseId = getPlanCourses(plan)[0];
   const course   = curriculum.find(c => c.id === courseId);
   if (!course) return;
 
@@ -1347,7 +1348,7 @@ function renderCourses(unlockedIds) {
 
 function goContinue() {
   const plan     = currentUser?.plan || 'סולו';
-  const courseId = (PLANS[plan]?.courses || [])[0];
+  const courseId = getPlanCourses(plan)[0];
   const course   = curriculum.find(c => c.id === courseId);
   if (!course) return;
   for (const ch of course.chapters) {
@@ -1626,7 +1627,7 @@ function submitQuiz() {
 // ══════════════════════════════════════
 function renderProgressMap() {
   const plan = currentUser?.plan || 'סולו';
-  const unlockedCourses = PLANS[plan]?.courses || ['חטיבה-תיכון'];
+  const unlockedCourses = getPlanCourses(plan);
   let html = '';
 
   curriculum.filter(c => unlockedCourses.includes(c.id)).forEach(c => {
