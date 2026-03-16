@@ -1414,8 +1414,8 @@ function renderLessons(courseId) {
         </div>`;
     });
 
-    // Quiz row
-    if (ch.quiz) {
+    // Quiz row — only show if quiz has at least one question
+    if (ch.quiz && parseQuestions(ch.quiz?.questions).length > 0) {
       const quizLocked = !allChDone;
       html += `
         <div class="quiz-row${quizLocked?' locked':''}" onclick="openQuiz('${courseId}','${ch.id}')">
@@ -1559,6 +1559,7 @@ function openQuiz(courseId, chapterId) {
   if (!ch?.quiz) return;
 
   currentQuiz = parseQuestions(ch.quiz.questions);
+  if (!currentQuiz.length) return;   // no questions yet — do nothing
   currentQuizCourseId   = courseId;
   currentQuizChapterId  = chapterId;
   quizAnswers   = {};
@@ -1688,8 +1689,8 @@ function renderProgressMap() {
           </div>`;
       });
 
-      // Quiz node
-      if (ch.quiz) {
+      // Quiz node — only show if quiz has at least one question
+      if (ch.quiz && parseQuestions(ch.quiz?.questions).length > 0) {
         const allDone  = allLessons.every(l => completedLessons[l.id]);
         const quizDone = completedQuizzes[ch.id];
         html += `

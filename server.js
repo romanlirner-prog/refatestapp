@@ -115,11 +115,7 @@ function seedHardcoded() {
       meta: '32 שיעורים · הכנה מלאה', sort_order: 0,
       chapters: [
         { id: 'ch1', title: 'מספרים ושברים', sort_order: 0,
-          quiz: { id: 'qz1', title: 'מבחן: מספרים ושברים', questions: [
-            { q: 'כמה הוא (-3) + 7?', options: ['4','10','-10','-4'], answer: 0 },
-            { q: 'מה הוא הערך המוחלט של -5?', options: ['5','-5','0','25'], answer: 0 },
-            { q: 'כמה הוא ²⁄₃ + ¹⁄₄?', options: ['¹¹⁄₁₂','³⁄₇','⅚','¾'], answer: 0 },
-          ]},
+          quiz: { id: 'qz1', title: 'מבחן: מספרים ושברים', questions: [] },
           lessons: [
             { id: 'c1l1', title: 'מספרים טבעיים ושלמים', description: 'נלמד על מספרים שלמים, ערך מוחלט וסדר פעולות חשבון.', tags: ['תיאוריה'], exercises: [], homework: [] },
             { id: 'c1l2', title: 'שברים רגילים וחישובים', description: 'חיבור, חיסור, כפל וחילוק של שברים. פישוט שברים.', tags: ['תיאוריה','תרגול'], exercises: [], homework: [] },
@@ -127,10 +123,7 @@ function seedHardcoded() {
           ]
         },
         { id: 'ch2', title: 'אלגברה — ביטויים ומשוואות', sort_order: 1,
-          quiz: { id: 'qz2', title: 'מבחן: אלגברה', questions: [
-            { q: 'פשט: 3x + 2x - x', options: ['4x','6x','5x','x'], answer: 0 },
-            { q: 'פתור: 2x + 5 = 13', options: ['x=4','x=9','x=3','x=5'], answer: 0 },
-          ]},
+          quiz: { id: 'qz2', title: 'מבחן: אלגברה', questions: [] },
           lessons: [
             { id: 'c2l1', title: 'ביטויים אלגבריים', description: 'פישוט ביטויים, הוצאת גורם משותף וכפל סוגריים.', tags: ['תיאוריה'], exercises: [], homework: [] },
             { id: 'c2l2', title: 'משוואה ממעלה ראשונה', description: 'פתרון משוואות לינאריות ושאלות מילוליות.', tags: ['תרגול'], exercises: [], homework: [] },
@@ -139,9 +132,7 @@ function seedHardcoded() {
           ]
         },
         { id: 'ch3', title: 'גאומטריה', sort_order: 2,
-          quiz: { id: 'qz3', title: 'מבחן: גאומטריה', questions: [
-            { q: 'מהי הזווית הנשלמת ל-65°?', options: ['115°','25°','90°','180°'], answer: 0 },
-          ]},
+          quiz: { id: 'qz3', title: 'מבחן: גאומטריה', questions: [] },
           lessons: [
             { id: 'c3l1', title: 'זוויות ומשפטים בסיסיים', description: 'זוויות משלימות, זוויות במשולש ומשפטים על קווים מקבילים.', tags: ['תיאוריה'], exercises: [], homework: [] },
             { id: 'c3l2', title: 'משפט פיתגורס', description: 'הכרת המשפט, שימוש ובדיקה.', tags: ['תרגול'], exercises: [], homework: [] },
@@ -149,18 +140,14 @@ function seedHardcoded() {
           ]
         },
         { id: 'ch4', title: 'פונקציות לינאריות', sort_order: 3,
-          quiz: { id: 'qz4', title: 'מבחן: פונקציות', questions: [
-            { q: 'שיפוע: (1,2) ו-(3,8)?', options: ['3','2','4','6'], answer: 0 },
-          ]},
+          quiz: { id: 'qz4', title: 'מבחן: פונקציות', questions: [] },
           lessons: [
             { id: 'c4l1', title: 'מושגי יסוד בפונקציה', description: 'תחום, טווח, נקודת חיתוך עם הצירים.', tags: ['תיאוריה'], exercises: [], homework: [] },
             { id: 'c4l2', title: 'שיפוע וקו ישר', description: 'חישוב שיפוע ומשוואת קו ישר.', tags: ['תרגול'], exercises: [], homework: [] },
           ]
         },
         { id: 'ch5', title: 'סטטיסטיקה', sort_order: 4,
-          quiz: { id: 'qz5', title: 'מבחן: סטטיסטיקה', questions: [
-            { q: 'ממוצע של: 3, 7, 5, 9, 1?', options: ['5','4','6','7'], answer: 0 },
-          ]},
+          quiz: { id: 'qz5', title: 'מבחן: סטטיסטיקה', questions: [] },
           lessons: [
             { id: 'c5l1', title: 'ממוצע, חציון, שכיח', description: 'חישוב מדדי מיקום מרכזיים.', tags: ['תיאוריה'], exercises: [], homework: [] },
             { id: 'c5l2', title: 'הסתברות בסיסית', description: 'חישוב הסתברות של אירועים פשוטים ומורכבים.', tags: ['תרגול'], exercises: [], homework: [] },
@@ -173,18 +160,14 @@ function seedHardcoded() {
       meta: '48 שיעורים · 3 רמות', sort_order: 1,
       chapters: [
         { id: 'bg1', title: 'חזרה על בסיס', sort_order: 0,
-          quiz: { id: 'qz6', title: 'מבחן: חזרה על בסיס', questions: [
-            { q: 'פשט: (2x²)³', options: ['8x⁶','6x⁶','8x⁵','2x⁶'], answer: 0 },
-          ]},
+          quiz: { id: 'qz6', title: 'מבחן: חזרה על בסיס', questions: [] },
           lessons: [
             { id: 'b1l1', title: 'אלגברה — חזרה מהירה', description: 'חזרה על נושאי אלגברה מהחטיבה.', tags: ['חזרה'], exercises: [], homework: [] },
             { id: 'b1l2', title: 'פונקציות — חזרה', description: 'גרפים, נקודות קיצון ואסימפטוטות.', tags: ['חזרה','גרף'], exercises: [], homework: [] },
           ]
         },
         { id: 'bg2', title: 'מבנה שאלון הבגרות', sort_order: 1,
-          quiz: { id: 'qz7', title: 'מבחן: אסטרטגיה', questions: [
-            { q: 'כמה זמן יש לשאלון בגרות מלאה?', options: ['3 שעות','2 שעות','4 שעות','שעתיים וחצי'], answer: 0 },
-          ]},
+          quiz: { id: 'qz7', title: 'מבחן: אסטרטגיה', questions: [] },
           lessons: [
             { id: 'b2l1', title: 'הכרת השאלון ואסטרטגיה', description: 'מבנה שאלון 806, ניהול זמן ואסטרטגיית פתרון.', tags: ['אסטרטגיה'], exercises: [], homework: [] },
             { id: 'b2l2', title: 'שאלות מילוליות — שיטה', description: 'שיטת 4 שלבים לפתרון שאלות מילוליות.', tags: ['שיטה'], exercises: [], homework: [] },
@@ -197,9 +180,7 @@ function seedHardcoded() {
       meta: '28 שיעורים · רמה גבוהה', sort_order: 2,
       chapters: [
         { id: 'mr1', title: 'חשבון דיפרנציאלי', sort_order: 0,
-          quiz: { id: 'qz8', title: 'מבחן: נגזרות', questions: [
-            { q: "f'(x) של x³:", options: ['3x²','x²','3x','x³'], answer: 0 },
-          ]},
+          quiz: { id: 'qz8', title: 'מבחן: נגזרות', questions: [] },
           lessons: [
             { id: 'm1l1', title: 'גבולות ורציפות', description: 'חישוב גבולות ובדיקת רציפות.', tags: ['תיאוריה'], exercises: [], homework: [] },
             { id: 'm1l2', title: 'נגזרות — כללים', description: 'כללי גזירה: חיבור, מכפלה, מנה, שרשרת.', tags: ['תרגול'], exercises: [], homework: [] },
@@ -236,6 +217,17 @@ function seedCurriculum() {
 }
 
 const _seedPromise = Promise.resolve(seedCurriculum());
+
+// ─── ONE-TIME MIGRATIONS ────────────────────────────────────────────────
+// Each migration runs exactly once, tracked by key in _migrations table.
+try {
+  db.exec("CREATE TABLE IF NOT EXISTS _migrations (key TEXT PRIMARY KEY)");
+  if (!db.prepare("SELECT key FROM _migrations WHERE key='clear_quiz_questions_v1'").get()) {
+    db.prepare("UPDATE quizzes SET questions='[]'").run();
+    db.prepare("INSERT INTO _migrations (key) VALUES (?)").run('clear_quiz_questions_v1');
+    console.log('[Migration] Cleared all dummy quiz questions');
+  }
+} catch(e) { console.error('[Migration error]', e.message); }
 
 // ─── CURRICULUM READ ───────────────────────────────────────────────────
 function getCurriculum() {
