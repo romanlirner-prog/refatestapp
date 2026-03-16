@@ -130,13 +130,26 @@ function normalisedCurriculum() {
 
 // Called on every individual admin save — keeps draft.json in sync so the next
 // cold-start instance seeds the latest edits (not stale published.json)
+// Write to local miniapp-data dir (for local dev) and/or GitHub (for Vercel)
+function writeLocalDataFile(filename, data) {
+  const localPath = path.join(__dirname, '..', 'miniapp-data', filename);
+  try {
+    fs.writeFileSync(localPath, JSON.stringify(data, null, 2));
+    console.log(`[Local] ${filename} updated ✓`);
+  } catch (e) { console.error(`[Local] ${filename} write failed:`, e.message); }
+}
+
 async function saveDraft() {
-  await writeGitHubFile('draft.json', normalisedCurriculum(), 'draft: admin saved');
+  const data = normalisedCurriculum();
+  if (!process.env.VERCEL) writeLocalDataFile('draft.json', data);
+  await writeGitHubFile('draft.json', data, 'draft: admin saved');
 }
 
 // Called only on explicit "פרסם" — copies current state to published.json
 async function publishSnapshot() {
-  await writeGitHubFile('published.json', normalisedCurriculum(), 'publish: admin pushed');
+  const data = normalisedCurriculum();
+  if (!process.env.VERCEL) writeLocalDataFile('published.json', data);
+  await writeGitHubFile('published.json', data, 'publish: admin pushed');
 }
 
 // Fallback in-memory version (used when GitHub env vars not configured)
