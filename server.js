@@ -92,13 +92,15 @@ db.exec(`
 try { db.exec("ALTER TABLE users ADD COLUMN completed_lessons TEXT DEFAULT '{}'"); } catch {}
 
 // ─── GITHUB ────────────────────────────────────────────────────────────
-async function syncToGitHub(data) {
+// Writes the published snapshot to published.json on GitHub.
+// Called ONLY from the explicit push endpoint — never on individual saves.
+async function publishToGitHub(data) {
   const token = process.env.GITHUB_TOKEN;
   const repo  = process.env.GITHUB_REPO;
   if (!token || !repo) return;
   try {
     const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
-    const apiBase = `https://api.github.com/repos/${repo}/contents/curriculum-data.json`;
+    const apiBase = `https://api.github.com/repos/${repo}/contents/published.json`;
     const headers = {
       Authorization: `Bearer ${token}`,
       Accept: 'application/vnd.github+json',
@@ -106,15 +108,15 @@ async function syncToGitHub(data) {
       'User-Agent': 'miniapp-server'
     };
     const getRes  = await fetch(apiBase, { headers });
-    const getJson = await getRes.json();
-    const sha = getJson.sha;
+    const getJson = getRes.ok ? await getRes.json() : {};
+    const sha = getJson.sha; // undefined if file doesn't exist yet — GitHub will create it
     const putRes = await fetch(apiBase, {
       method: 'PUT', headers,
-      body: JSON.stringify({ message: 'chore: sync curriculum via admin', content, sha })
+      body: JSON.stringify({ message: 'publish: admin pushed curriculum update', content, ...(sha && { sha }) })
     });
-    if (putRes.ok) console.log('[GitHub] curriculum-data.json synced ✓');
-    else console.error('[GitHub] sync failed:', await putRes.text());
-  } catch (e) { console.error('[GitHub sync]', e.message); }
+    if (putRes.ok) console.log('[GitHub] published.json updated ✓');
+    else console.error('[GitHub] publish failed:', await putRes.text());
+  } catch (e) { console.error('[GitHub publish]', e.message); }
 }
 
 // Fallback in-memory version (used when GitHub env vars not configured)
@@ -131,7 +133,7 @@ async function getGitHubCurriculum() {
   const now = Date.now();
   if (_ghCache.data && (now - _ghCache.ts) < GH_CACHE_TTL) return _ghCache;
   try {
-    const res = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum-data.json`, {
+    const res = await fetch(`https://api.github.com/repos/${repo}/contents/published.json`, {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
     });
     if (res.ok) {
@@ -147,19 +149,17 @@ async function getGitHubCurriculum() {
 }
 
 // Called after every admin mutation — awaited before sending response
-async function saveToGitHub() {
-  try {
-    const data = getCurriculum();
-    // Parse quiz.questions from string to array before saving
-    for (const c of data) {
-      for (const ch of c.chapters) {
-        if (ch.quiz && typeof ch.quiz.questions === 'string') {
-          try { ch.quiz.questions = JSON.parse(ch.quiz.questions); } catch { ch.quiz.questions = []; }
-        }
+// Builds the publish payload (normalises quiz.questions) and writes to published.json
+async function publishSnapshot() {
+  const data = getCurriculum();
+  for (const c of data) {
+    for (const ch of c.chapters) {
+      if (ch.quiz && typeof ch.quiz.questions === 'string') {
+        try { ch.quiz.questions = JSON.parse(ch.quiz.questions); } catch { ch.quiz.questions = []; }
       }
     }
-    await syncToGitHub(data);
-  } catch (e) { console.error('[saveToGitHub]', e.message); }
+  }
+  await publishToGitHub(data);
 }
 
 // ─── SEED ──────────────────────────────────────────────────────────────
@@ -169,7 +169,7 @@ async function seedCurriculum() {
     try {
       const token = process.env.GITHUB_TOKEN;
       const repo  = process.env.GITHUB_REPO;
-      const res   = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum-data.json`, {
+      const res   = await fetch(`https://api.github.com/repos/${repo}/contents/published.json`, {
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
       });
       if (res.ok) {
@@ -490,7 +490,6 @@ app.post('/api/admin/courses', async (req, res) => {
   if (!id || !name) return res.status(400).json({ error: 'id and name required' });
   const n = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
   db.prepare('INSERT INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)').run(id,name,emoji,color,meta,n);
-  await saveToGitHub();
   res.json({ ok: true });
 });
 
@@ -499,7 +498,6 @@ app.put('/api/admin/courses/:id', async (req, res) => {
   const { name, emoji, color, meta, sort_order } = req.body;
   db.prepare('UPDATE courses SET name=COALESCE(?,name), emoji=COALESCE(?,emoji), color=COALESCE(?,color), meta=COALESCE(?,meta), sort_order=COALESCE(?,sort_order) WHERE id=?')
     .run(name||null, emoji||null, color||null, meta||null, sort_order??null, req.params.id);
-  await saveToGitHub();
   res.json({ ok: true });
 });
 
@@ -513,7 +511,6 @@ app.delete('/api/admin/courses/:id', async (req, res) => {
   }
   db.prepare('DELETE FROM chapters WHERE course_id=?').run(cid);
   db.prepare('DELETE FROM courses WHERE id=?').run(cid);
-  await saveToGitHub();
   res.json({ ok: true });
 });
 
@@ -524,7 +521,6 @@ app.post('/api/admin/chapters', async (req, res) => {
   if (!id || !course_id || !title) return res.status(400).json({ error: 'missing fields' });
   const n = db.prepare('SELECT COUNT(*) as n FROM chapters WHERE course_id=?').get(course_id).n;
   db.prepare('INSERT INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)').run(id,course_id,title,n);
-  await saveToGitHub();
   res.json({ ok: true });
 });
 
@@ -532,7 +528,6 @@ app.put('/api/admin/chapters/:id', async (req, res) => {
   await _seedPromise;
   const { title, sort_order } = req.body;
   db.prepare('UPDATE chapters SET title=COALESCE(?,title), sort_order=COALESCE(?,sort_order) WHERE id=?').run(title||null, sort_order??null, req.params.id);
-  await saveToGitHub();
   res.json({ ok: true });
 });
 
@@ -542,7 +537,6 @@ app.delete('/api/admin/chapters/:id', async (req, res) => {
   db.prepare('DELETE FROM lessons WHERE chapter_id=?').run(cid);
   db.prepare('DELETE FROM quizzes WHERE chapter_id=?').run(cid);
   db.prepare('DELETE FROM chapters WHERE id=?').run(cid);
-  await saveToGitHub();
   res.json({ ok: true });
 });
 
@@ -554,7 +548,6 @@ app.post('/api/admin/lessons', async (req, res) => {
   const n = db.prepare('SELECT COUNT(*) as n FROM lessons WHERE chapter_id=?').get(chapter_id).n;
   db.prepare('INSERT INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
     .run(id,chapter_id,title,description,video_url,JSON.stringify(tags),JSON.stringify(exercises),JSON.stringify(homework),n);
-  await saveToGitHub();
   res.json({ ok: true });
 });
 
@@ -573,14 +566,12 @@ app.put('/api/admin/lessons/:id', async (req, res) => {
       homework?JSON.stringify(homework):null,
       sort_order??null, req.params.id
     );
-  await saveToGitHub();
   res.json({ ok: true });
 });
 
 app.delete('/api/admin/lessons/:id', async (req, res) => {
   await _seedPromise;
   db.prepare('DELETE FROM lessons WHERE id=?').run(req.params.id);
-  await saveToGitHub();
   res.json({ ok: true });
 });
 
@@ -596,15 +587,14 @@ app.put('/api/admin/quizzes/:chapter_id', async (req, res) => {
     const id = 'qz_' + Date.now();
     db.prepare('INSERT INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)').run(id, req.params.chapter_id, title||'מבחן מסכם', JSON.stringify(questions||[]));
   }
-  await saveToGitHub();
   res.json({ ok: true });
 });
 
-// Export
-// Push curriculum to all users — bumps version (clients polling every 2s will refresh) + saves to GitHub
+// Publish — writes current DB state to published.json on GitHub, busts cache
 app.post('/api/admin/push', async (req, res) => {
   await _seedPromise;
-  await saveToGitHub();
+  await publishSnapshot();
+  _ghCache = { data: null, sha: null, ts: 0 }; // bust cache so next poll fetches fresh
   curriculumVersion = Date.now();
   res.json({ ok: true, version: curriculumVersion });
 });
@@ -612,7 +602,7 @@ app.post('/api/admin/push', async (req, res) => {
 app.get('/api/admin/export-curriculum', async (req, res) => {
   await _seedPromise;
   const data = getCurriculum();
-  res.setHeader('Content-Disposition', 'attachment; filename="curriculum-data.json"');
+  res.setHeader('Content-Disposition', 'attachment; filename="published.json"');
   res.json(data);
 });
 
