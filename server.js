@@ -117,8 +117,34 @@ async function syncToGitHub(data) {
   } catch (e) { console.error('[GitHub sync]', e.message); }
 }
 
-// Bumped on every admin mutation — clients poll this to detect changes
+// Fallback in-memory version (used when GitHub env vars not configured)
 let curriculumVersion = Date.now();
+
+// GitHub cache — shared version source across all Vercel instances
+let _ghCache = { data: null, sha: null, ts: 0 };
+const GH_CACHE_TTL = 5000; // 5 seconds
+
+async function getGitHubCurriculum() {
+  const token = process.env.GITHUB_TOKEN;
+  const repo  = process.env.GITHUB_REPO;
+  if (!token || !repo) return null;
+  const now = Date.now();
+  if (_ghCache.data && (now - _ghCache.ts) < GH_CACHE_TTL) return _ghCache;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum.json`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.content) {
+        const data = JSON.parse(Buffer.from(json.content, 'base64').toString('utf8'));
+        _ghCache = { data, sha: json.sha, ts: now };
+        return _ghCache;
+      }
+    }
+  } catch (e) { console.error('[GHCache]', e.message); }
+  return _ghCache.data ? _ghCache : null; // return stale on error
+}
 
 // Called after every admin mutation — awaited before sending response
 async function saveToGitHub() {
@@ -399,13 +425,18 @@ app.post('/api/progress', (req, res) => {
 
 // ─── CURRICULUM READ ───────────────────────────────────────────────────
 app.get('/api/curriculum', async (req, res) => {
+  // Always try GitHub first (fresh, consistent across all Vercel instances)
+  const cached = await getGitHubCurriculum();
+  if (cached?.data) return res.json(cached.data);
+  // Fallback: local DB (seeded on cold start)
   await _seedPromise;
   res.json(getCurriculum());
 });
 
 app.get('/api/curriculum-version', async (req, res) => {
-  await _seedPromise;
-  res.json({ version: curriculumVersion });
+  // Use GitHub file SHA as version — identical across all Vercel instances
+  const cached = await getGitHubCurriculum();
+  res.json({ version: cached?.sha || curriculumVersion });
 });
 
 // ─── QUIZ RESULT ───────────────────────────────────────────────────────
