@@ -1,8 +1,6 @@
 /**
  * Rafael Mini App — Backend
  * Stack: Express + node:sqlite (Node 22.5+)
- * Curriculum stored in draft.json / published.json on GitHub (not SQLite).
- * SQLite used only for users / purchases / progress / quiz_results.
  */
 
 require('dotenv').config();
@@ -21,7 +19,7 @@ const staticDir = process.env.VERCEL ? path.join(process.cwd()) : path.join(__di
 app.use(express.static(staticDir));
 app.get('/', (req, res) => res.sendFile(path.join(staticDir, 'index.html')));
 
-// ─── DB (users / purchases / progress only) ────────────────────────────
+// ─── DB ────────────────────────────────────────────────────────────────
 const DB_PATH = process.env.VERCEL ? '/tmp/miniapp.db' : path.join(__dirname, 'miniapp.db');
 const db = new DatabaseSync(DB_PATH);
 db.exec('PRAGMA journal_mode = WAL');
@@ -47,102 +45,112 @@ db.exec(`
     progress    INTEGER DEFAULT 0,
     linked_at   DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS courses (
+    id         TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    emoji      TEXT DEFAULT '📚',
+    color      TEXT DEFAULT 'ct-blue',
+    meta       TEXT DEFAULT '',
+    sort_order INTEGER DEFAULT 0
+  );
+  CREATE TABLE IF NOT EXISTS chapters (
+    id         TEXT PRIMARY KEY,
+    course_id  TEXT NOT NULL,
+    title      TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    FOREIGN KEY (course_id) REFERENCES courses(id)
+  );
+  CREATE TABLE IF NOT EXISTS lessons (
+    id          TEXT PRIMARY KEY,
+    chapter_id  TEXT NOT NULL,
+    title       TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    video_url   TEXT DEFAULT '',
+    tags        TEXT DEFAULT '[]',
+    exercises   TEXT DEFAULT '[]',
+    homework    TEXT DEFAULT '[]',
+    sort_order  INTEGER DEFAULT 0,
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id)
+  );
+  CREATE TABLE IF NOT EXISTS quizzes (
+    id         TEXT PRIMARY KEY,
+    chapter_id TEXT UNIQUE NOT NULL,
+    title      TEXT DEFAULT 'מבחן מסכם',
+    questions  TEXT DEFAULT '[]',
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id)
+  );
   CREATE TABLE IF NOT EXISTS quiz_results (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
     user_telegram_id TEXT,
-    quiz_id          TEXT,
-    score            INTEGER,
-    total            INTEGER,
-    taken_at         DATETIME DEFAULT CURRENT_TIMESTAMP
+    quiz_id         TEXT,
+    score           INTEGER,
+    total           INTEGER,
+    taken_at        DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
 
 try { db.exec("ALTER TABLE users ADD COLUMN completed_lessons TEXT DEFAULT '{}'"); } catch {}
 
 // ─── GITHUB ────────────────────────────────────────────────────────────
+// The data repo is separate from the code repo so deploys never overwrite content.
 // Set DATA_GITHUB_REPO=owner/repo in Vercel env vars pointing to miniapp-data repo.
 const DATA_REPO = process.env.DATA_GITHUB_REPO || process.env.GITHUB_REPO;
 
-// Generic GitHub file writer — GET existing SHA then PUT new content
+// Generic GitHub file writer
 async function writeGitHubFile(filename, data, message) {
   const token = process.env.GITHUB_TOKEN;
   const repo  = DATA_REPO;
+  console.log(`[writeGitHubFile] repo=${repo} file=${filename} token=${token ? 'SET' : 'MISSING'}`);
   if (!token || !repo) { console.error('[writeGitHubFile] missing token or repo — skipping'); return; }
   try {
     const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
     const apiBase = `https://api.github.com/repos/${repo}/contents/${filename}`;
-    const headers = {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github+json',
-      'Content-Type': 'application/json',
-      'User-Agent': 'miniapp-server'
-    };
+    const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'User-Agent': 'miniapp-server' };
     const getRes  = await fetch(apiBase, { headers });
     const getJson = getRes.ok ? await getRes.json() : {};
-    const putRes  = await fetch(apiBase, {
-      method: 'PUT', headers,
+    console.log(`[writeGitHubFile] GET ${filename} status=${getRes.status} sha=${getJson.sha || 'none'}`);
+    const putRes  = await fetch(apiBase, { method: 'PUT', headers,
       body: JSON.stringify({ message, content, ...(getJson.sha && { sha: getJson.sha }) })
     });
+    const putBody = await putRes.text();
     if (putRes.ok) console.log(`[GitHub] ${filename} updated ✓`);
-    else console.error(`[GitHub] ${filename} PUT failed (${putRes.status}):`, await putRes.text());
+    else console.error(`[GitHub] ${filename} PUT failed (${putRes.status}):`, putBody);
   } catch (e) { console.error(`[GitHub ${filename}] exception:`, e.message); }
 }
 
-// ─── DRAFT.JSON — curriculum database ──────────────────────────────────
-let _draftCache = { data: null, ts: 0 };
-const DRAFT_CACHE_TTL = 1000; // 1 s
-
-async function readDraft() {
-  const token = process.env.GITHUB_TOKEN;
-  const repo  = DATA_REPO;
-  const now   = Date.now();
-  if (_draftCache.data && (now - _draftCache.ts) < DRAFT_CACHE_TTL) return _draftCache.data;
-  if (token && repo) {
-    try {
-      const res = await fetch(`https://api.github.com/repos/${repo}/contents/draft.json`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.content) {
-          const data = JSON.parse(Buffer.from(json.content, 'base64').toString('utf8'));
-          _draftCache = { data: Array.isArray(data) ? data : [], ts: now };
-          return _draftCache.data;
-        }
-      }
-    } catch (e) { console.error('[readDraft]', e.message); }
-  }
-  // Fallback: already-cached stale data or local file
-  if (_draftCache.data) return _draftCache.data;
-  try {
-    const paths = [CURRICULUM_JSON, path.join(process.cwd(), 'curriculum.json')];
-    for (const p of paths) {
-      if (fs.existsSync(p)) {
-        const local = JSON.parse(fs.readFileSync(p, 'utf8'));
-        if (Array.isArray(local) && local.length > 0) {
-          _draftCache = { data: local, ts: now };
-          return local;
-        }
-      }
-    }
-  } catch {}
-  return [];
+// Normalise quiz.questions string → array
+function normalisedCurriculum() {
+  const data = getCurriculum();
+  for (const c of data)
+    for (const ch of c.chapters)
+      if (ch.quiz && typeof ch.quiz.questions === 'string')
+        try { ch.quiz.questions = JSON.parse(ch.quiz.questions); } catch { ch.quiz.questions = []; }
+  return data;
 }
 
-async function writeDraft(data) {
-  _draftCache = { data, ts: Date.now() };
-  await writeGitHubFile('draft.json', data, 'draft: admin saved');
+// Called on every individual admin save — keeps draft.json in sync so the next
+// cold-start instance seeds the latest edits (not stale published.json)
+async function saveDraft() {
+  await writeGitHubFile('draft.json', normalisedCurriculum(), 'draft: admin saved');
 }
 
-// ─── PUBLISHED.JSON — user-facing version (only updated on push) ───────
-let _pubCache = { data: null, sha: null, ts: 0 };
-const PUB_CACHE_TTL = 5000;
+// Called only on explicit "פרסם" — copies current state to published.json
+async function publishSnapshot() {
+  await writeGitHubFile('published.json', normalisedCurriculum(), 'publish: admin pushed');
+}
 
-async function getPublished() {
+// Fallback in-memory version (used when GitHub env vars not configured)
+let curriculumVersion = Date.now();
+
+// GitHub cache for published.json — shared version source across all Vercel instances
+let _ghCache = { data: null, sha: null, ts: 0 };
+const GH_CACHE_TTL = 5000;
+
+async function getGitHubCurriculum() {
   const token = process.env.GITHUB_TOKEN;
   if (!token || !DATA_REPO) return null;
   const now = Date.now();
-  if (_pubCache.data && (now - _pubCache.ts) < PUB_CACHE_TTL) return _pubCache;
+  if (_ghCache.data && (now - _ghCache.ts) < GH_CACHE_TTL) return _ghCache;
   try {
     const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/published.json`, {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
@@ -151,16 +159,180 @@ async function getPublished() {
       const json = await res.json();
       if (json.content) {
         const data = JSON.parse(Buffer.from(json.content, 'base64').toString('utf8'));
-        _pubCache = { data, sha: json.sha, ts: now };
-        return _pubCache;
+        _ghCache = { data, sha: json.sha, ts: now };
+        return _ghCache;
       }
     }
-  } catch (e) { console.error('[getPublished]', e.message); }
-  return _pubCache.data ? _pubCache : null;
+  } catch (e) { console.error('[GHCache]', e.message); }
+  return _ghCache.data ? _ghCache : null;
 }
 
-// Fallback in-memory version bump (used when GitHub not configured)
-let curriculumVersion = Date.now();
+// ─── SEED ──────────────────────────────────────────────────────────────
+async function seedCurriculum() {
+  // תמיד ננסה לסנכרן מ-GitHub קודם
+  if (process.env.GITHUB_TOKEN && DATA_REPO) {
+    try {
+      const token = process.env.GITHUB_TOKEN;
+      const repo  = DATA_REPO;
+      // Seed from draft.json (latest admin edits) so cold-start instances
+      // always have up-to-date data, even before an explicit publish.
+      const res = await fetch(`https://api.github.com/repos/${repo}/contents/draft.json`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.content) {
+          const data = JSON.parse(Buffer.from(json.content, 'base64').toString('utf8'));
+          if (Array.isArray(data) && data.length > 0) {
+            db.exec('DELETE FROM quizzes; DELETE FROM lessons; DELETE FROM chapters; DELETE FROM courses;');
+            seedFromJson(data);
+            console.log('[Seed] Synced from draft.json ✓');
+            return;
+          }
+        }
+      }
+    } catch (e) { console.error('[Seed] GitHub failed:', e.message); }
+  }
+
+  // fallback: רק אם DB ריק
+  const count = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
+  if (count > 0) return;
+  const filePaths = [CURRICULUM_JSON, path.join(process.cwd(), 'curriculum.json')];
+  for (const p of filePaths) {
+    try {
+      if (fs.existsSync(p)) {
+        const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+        if (Array.isArray(data) && data.length > 0) {
+          seedFromJson(data);
+          console.log('[Seed] Loaded from', p);
+          return;
+        }
+      }
+    } catch {}
+  }
+  seedHardcoded();
+}
+
+function seedFromJson(courses) {
+  for (const course of courses) {
+    db.prepare('INSERT OR IGNORE INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)')
+      .run(course.id, course.name, course.emoji||'📚', course.color||'ct-blue', course.meta||'', course.sort_order||0);
+    for (const ch of (course.chapters||[])) {
+      db.prepare('INSERT OR IGNORE INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)')
+        .run(ch.id, course.id, ch.title, ch.sort_order||0);
+      if (ch.quiz) {
+        const qs = Array.isArray(ch.quiz.questions) ? JSON.stringify(ch.quiz.questions) : (ch.quiz.questions || '[]');
+        db.prepare('INSERT OR IGNORE INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)')
+          .run(ch.quiz.id, ch.id, ch.quiz.title||'מבחן מסכם', qs);
+      }
+      for (let li = 0; li < (ch.lessons||[]).length; li++) {
+        const ls = ch.lessons[li];
+        db.prepare('INSERT OR IGNORE INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
+          .run(ls.id, ch.id, ls.title, ls.description||'', ls.video_url||'',
+               JSON.stringify(ls.tags||[]), JSON.stringify(ls.exercises||[]),
+               JSON.stringify(ls.homework||ls.hw||[]), ls.sort_order??li);
+      }
+    }
+  }
+}
+
+function seedHardcoded() {
+  const curriculum = [
+    {
+      id: 'חטיבה-תיכון', name: 'חטיבה → תיכון', emoji: '📐', color: 'ct-blue',
+      meta: '32 שיעורים · הכנה מלאה', sort_order: 0,
+      chapters: [
+        { id: 'ch1', title: 'מספרים ושברים', sort_order: 0,
+          quiz: { id: 'qz1', title: 'מבחן: מספרים ושברים', questions: [
+            { q: 'כמה הוא (-3) + 7?', options: ['4','10','-10','-4'], answer: 0 }
+          ]},
+          lessons: [
+            { id: 'c1l1', title: 'מספרים טבעיים ושלמים', description: '', tags: [], exercises: [], homework: [] },
+            { id: 'c1l2', title: 'שברים רגילים וחישובים', description: '', tags: [], exercises: [], homework: [] },
+          ]
+        },
+        { id: 'ch2', title: 'אלגברה — ביטויים ומשוואות', sort_order: 1,
+          quiz: { id: 'qz2', title: 'מבחן: אלגברה', questions: [
+            { q: 'פשט: 3x + 2x - x', options: ['4x','6x','5x','x'], answer: 0 }
+          ]},
+          lessons: [
+            { id: 'c2l1', title: 'ביטויים אלגבריים', description: '', tags: [], exercises: [], homework: [] },
+            { id: 'c2l2', title: 'משוואה ממעלה ראשונה', description: '', tags: [], exercises: [], homework: [] },
+          ]
+        },
+      ]
+    },
+    {
+      id: 'הכנה לבגרות', name: 'הכנה לבגרות', emoji: '📝', color: 'ct-green',
+      meta: '48 שיעורים · 3 רמות', sort_order: 1,
+      chapters: [
+        { id: 'bg1', title: 'חזרה על בסיס', sort_order: 0,
+          quiz: { id: 'qz6', title: 'מבחן: חזרה', questions: [] },
+          lessons: [
+            { id: 'b1l1', title: 'אלגברה — חזרה מהירה', description: '', tags: [], exercises: [], homework: [] },
+          ]
+        },
+      ]
+    },
+    {
+      id: 'בגרות מורחבת', name: "בגרות מורחבת (5 יח')", emoji: '🏆', color: 'ct-amber',
+      meta: '28 שיעורים · רמה גבוהה', sort_order: 2,
+      chapters: [
+        { id: 'mr1', title: 'חשבון דיפרנציאלי', sort_order: 0,
+          quiz: { id: 'qz8', title: 'מבחן: נגזרות', questions: [] },
+          lessons: [
+            { id: 'm1l1', title: 'גבולות ורציפות', description: '', tags: [], exercises: [], homework: [] },
+          ]
+        }
+      ]
+    }
+  ];
+  for (const course of curriculum) {
+    db.prepare('INSERT OR IGNORE INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)')
+      .run(course.id, course.name, course.emoji, course.color, course.meta, course.sort_order);
+    for (const ch of course.chapters) {
+      db.prepare('INSERT OR IGNORE INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)')
+        .run(ch.id, course.id, ch.title, ch.sort_order);
+      if (ch.quiz) {
+        db.prepare('INSERT OR IGNORE INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)')
+          .run(ch.quiz.id, ch.id, ch.quiz.title, JSON.stringify(ch.quiz.questions));
+      }
+      ch.lessons.forEach((ls, li) => {
+        db.prepare('INSERT OR IGNORE INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
+          .run(ls.id, ch.id, ls.title, ls.description, '', JSON.stringify(ls.tags), JSON.stringify(ls.exercises), JSON.stringify(ls.homework), li);
+      });
+    }
+  }
+  console.log('[Seed] Hardcoded curriculum seeded');
+}
+
+// Run seed (async — awaited before first use via _seedPromise)
+const _seedPromise = seedCurriculum();
+
+// ─── CURRICULUM READ ───────────────────────────────────────────────────
+function getCurriculum() {
+  const courses  = db.prepare('SELECT * FROM courses ORDER BY sort_order').all();
+  const chapters = db.prepare('SELECT * FROM chapters ORDER BY sort_order').all();
+  const lessons  = db.prepare('SELECT * FROM lessons ORDER BY sort_order').all();
+  const quizzes  = db.prepare('SELECT * FROM quizzes').all();
+  return courses.map(c => ({
+    ...c,
+    chapters: chapters
+      .filter(ch => ch.course_id === c.id)
+      .map(ch => ({
+        ...ch,
+        quiz: quizzes.find(q => q.chapter_id === ch.id) || null,
+        lessons: lessons
+          .filter(l => l.chapter_id === ch.id)
+          .map(l => ({
+            ...l,
+            tags:      JSON.parse(l.tags      || '[]'),
+            exercises: JSON.parse(l.exercises || '[]'),
+            homework:  JSON.parse(l.homework  || '[]'),
+          }))
+      }))
+  }));
+}
 
 // ─── HELPERS ───────────────────────────────────────────────────────────
 function verifyTgInitData(initData) {
@@ -169,7 +341,7 @@ function verifyTgInitData(initData) {
     const params = new URLSearchParams(initData);
     const hash   = params.get('hash');
     params.delete('hash');
-    const dataStr  = [...params.entries()].sort(([a],[b]) => a.localeCompare(b)).map(([k,v]) => `${k}=${v}`).join('\n');
+    const dataStr = [...params.entries()].sort(([a],[b]) => a.localeCompare(b)).map(([k,v]) => `${k}=${v}`).join('\n');
     const secret   = crypto.createHmac('sha256', 'WebAppData').update(process.env.BOT_TOKEN).digest();
     const expected = crypto.createHmac('sha256', secret).update(dataStr).digest('hex');
     return hash === expected;
@@ -189,9 +361,6 @@ function resolvePlan(productName = '', amount = 0) {
 function normalizePhone(phone = '') {
   return phone.replace(/[\s\-+]/g, '');
 }
-
-// Deep-clone helper so we never mutate cache directly
-function cloneDraft(d) { return JSON.parse(JSON.stringify(d)); }
 
 // ─── USER ROUTES ───────────────────────────────────────────────────────
 app.post('/api/auth', (req, res) => {
@@ -260,18 +429,19 @@ app.post('/api/progress', (req, res) => {
   res.json({ ok: true });
 });
 
-// ─── CURRICULUM READ (public) ───────────────────────────────────────────
-// Returns published.json — only updated when admin presses "פרסם לכולם"
+// ─── CURRICULUM READ ───────────────────────────────────────────────────
 app.get('/api/curriculum', async (req, res) => {
-  const cached = await getPublished();
-  if (cached?.data && cached.data.length > 0) return res.json(cached.data);
-  // Fallback: draft (so students aren't left with empty content)
-  const draft = await readDraft();
-  res.json(draft);
+  // Always try GitHub first (fresh, consistent across all Vercel instances)
+  const cached = await getGitHubCurriculum();
+  if (cached?.data) return res.json(cached.data);
+  // Fallback: local DB (seeded on cold start)
+  await _seedPromise;
+  res.json(getCurriculum());
 });
 
 app.get('/api/curriculum-version', async (req, res) => {
-  const cached = await getPublished();
+  // Use GitHub file SHA as version — identical across all Vercel instances
+  const cached = await getGitHubCurriculum();
   res.json({ version: cached?.sha || curriculumVersion });
 });
 
@@ -312,147 +482,134 @@ app.get('/api/admin/stats', (req, res) => {
   res.json({ totalUsers, totalPurchases, bySolo, byClass, byMentor, recentUsers });
 });
 
-// Admin: read curriculum from draft.json
 app.get('/api/admin/courses', async (req, res) => {
-  res.json(await readDraft());
+  await _seedPromise;
+  res.json(getCurriculum());
 });
 
-// ─── ADMIN CURRICULUM CRUD (all operate on draft.json directly) ─────────
+// ─── ADMIN CURRICULUM CRUD ─────────────────────────────────────────────
 
 // Courses
 app.post('/api/admin/courses', async (req, res) => {
+  await _seedPromise;
   const { id, name, emoji='📚', color='ct-blue', meta='' } = req.body;
   if (!id || !name) return res.status(400).json({ error: 'id and name required' });
-  const draft = cloneDraft(await readDraft());
-  if (draft.find(c => c.id === id)) return res.status(400).json({ error: 'id already exists' });
-  draft.push({ id, name, emoji, color, meta, sort_order: draft.length, chapters: [] });
-  await writeDraft(draft);
-  res.json({ ok: true });
+  const n = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
+  db.prepare('INSERT INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)').run(id,name,emoji,color,meta,n);
+  await saveDraft(); res.json({ ok: true });
 });
 
 app.put('/api/admin/courses/:id', async (req, res) => {
+  await _seedPromise;
   const { name, emoji, color, meta, sort_order } = req.body;
-  const draft = cloneDraft(await readDraft());
-  const course = draft.find(c => c.id === req.params.id);
-  if (!course) return res.status(404).json({ error: 'not found' });
-  if (name        !== undefined) course.name       = name;
-  if (emoji       !== undefined) course.emoji      = emoji;
-  if (color       !== undefined) course.color      = color;
-  if (meta        !== undefined) course.meta       = meta;
-  if (sort_order  !== undefined) course.sort_order = sort_order;
-  await writeDraft(draft);
-  res.json({ ok: true });
+  db.prepare('UPDATE courses SET name=COALESCE(?,name), emoji=COALESCE(?,emoji), color=COALESCE(?,color), meta=COALESCE(?,meta), sort_order=COALESCE(?,sort_order) WHERE id=?')
+    .run(name||null, emoji||null, color||null, meta||null, sort_order??null, req.params.id);
+  await saveDraft(); res.json({ ok: true });
 });
 
 app.delete('/api/admin/courses/:id', async (req, res) => {
-  const draft = cloneDraft(await readDraft());
-  const idx = draft.findIndex(c => c.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'not found' });
-  draft.splice(idx, 1);
-  await writeDraft(draft);
-  res.json({ ok: true });
+  await _seedPromise;
+  const cid = req.params.id;
+  const chapters = db.prepare('SELECT id FROM chapters WHERE course_id=?').all(cid);
+  for (const ch of chapters) {
+    db.prepare('DELETE FROM lessons WHERE chapter_id=?').run(ch.id);
+    db.prepare('DELETE FROM quizzes WHERE chapter_id=?').run(ch.id);
+  }
+  db.prepare('DELETE FROM chapters WHERE course_id=?').run(cid);
+  db.prepare('DELETE FROM courses WHERE id=?').run(cid);
+  await saveDraft(); res.json({ ok: true });
 });
 
 // Chapters
 app.post('/api/admin/chapters', async (req, res) => {
+  await _seedPromise;
   const { id, course_id, title } = req.body;
   if (!id || !course_id || !title) return res.status(400).json({ error: 'missing fields' });
-  const draft = cloneDraft(await readDraft());
-  const course = draft.find(c => c.id === course_id);
-  if (!course) return res.status(404).json({ error: 'course not found' });
-  course.chapters = course.chapters || [];
-  course.chapters.push({ id, course_id, title, sort_order: course.chapters.length, lessons: [], quiz: null });
-  await writeDraft(draft);
-  res.json({ ok: true });
+  const n = db.prepare('SELECT COUNT(*) as n FROM chapters WHERE course_id=?').get(course_id).n;
+  db.prepare('INSERT INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)').run(id,course_id,title,n);
+  await saveDraft(); res.json({ ok: true });
 });
 
 app.put('/api/admin/chapters/:id', async (req, res) => {
+  await _seedPromise;
   const { title, sort_order } = req.body;
-  const draft = cloneDraft(await readDraft());
-  let found = null;
-  for (const c of draft) for (const ch of (c.chapters||[])) if (ch.id === req.params.id) { found = ch; break; }
-  if (!found) return res.status(404).json({ error: 'not found' });
-  if (title      !== undefined) found.title      = title;
-  if (sort_order !== undefined) found.sort_order = sort_order;
-  await writeDraft(draft);
-  res.json({ ok: true });
+  db.prepare('UPDATE chapters SET title=COALESCE(?,title), sort_order=COALESCE(?,sort_order) WHERE id=?').run(title||null, sort_order??null, req.params.id);
+  await saveDraft(); res.json({ ok: true });
 });
 
 app.delete('/api/admin/chapters/:id', async (req, res) => {
-  const draft = cloneDraft(await readDraft());
-  for (const c of draft) {
-    const idx = (c.chapters||[]).findIndex(ch => ch.id === req.params.id);
-    if (idx !== -1) { c.chapters.splice(idx, 1); await writeDraft(draft); return res.json({ ok: true }); }
-  }
-  res.status(404).json({ error: 'not found' });
+  await _seedPromise;
+  const cid = req.params.id;
+  db.prepare('DELETE FROM lessons WHERE chapter_id=?').run(cid);
+  db.prepare('DELETE FROM quizzes WHERE chapter_id=?').run(cid);
+  db.prepare('DELETE FROM chapters WHERE id=?').run(cid);
+  await saveDraft(); res.json({ ok: true });
 });
 
 // Lessons
 app.post('/api/admin/lessons', async (req, res) => {
+  await _seedPromise;
   const { id, chapter_id, title, description='', video_url='', tags=[], exercises=[], homework=[] } = req.body;
   if (!id || !chapter_id || !title) return res.status(400).json({ error: 'missing fields' });
-  const draft = cloneDraft(await readDraft());
-  let found = null;
-  for (const c of draft) for (const ch of (c.chapters||[])) if (ch.id === chapter_id) { found = ch; break; }
-  if (!found) return res.status(404).json({ error: 'chapter not found' });
-  found.lessons = found.lessons || [];
-  found.lessons.push({ id, chapter_id, title, description, video_url, tags, exercises, homework, sort_order: found.lessons.length });
-  await writeDraft(draft);
-  res.json({ ok: true });
+  const n = db.prepare('SELECT COUNT(*) as n FROM lessons WHERE chapter_id=?').get(chapter_id).n;
+  db.prepare('INSERT INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
+    .run(id,chapter_id,title,description,video_url,JSON.stringify(tags),JSON.stringify(exercises),JSON.stringify(homework),n);
+  await saveDraft(); res.json({ ok: true });
 });
 
 app.put('/api/admin/lessons/:id', async (req, res) => {
+  await _seedPromise;
   const { title, description, video_url, tags, exercises, homework, sort_order } = req.body;
-  const draft = cloneDraft(await readDraft());
-  let found = null;
-  for (const c of draft) for (const ch of (c.chapters||[])) for (const l of (ch.lessons||[])) if (l.id === req.params.id) { found = l; break; }
-  if (!found) return res.status(404).json({ error: 'not found' });
-  if (title       !== undefined) found.title       = title;
-  if (description !== undefined) found.description = description;
-  if (video_url   !== undefined) found.video_url   = video_url;
-  if (tags        !== undefined) found.tags        = tags;
-  if (exercises   !== undefined) found.exercises   = exercises;
-  if (homework    !== undefined) found.homework    = homework;
-  if (sort_order  !== undefined) found.sort_order  = sort_order;
-  await writeDraft(draft);
-  res.json({ ok: true });
+  db.prepare(`UPDATE lessons SET
+    title=COALESCE(?,title), description=COALESCE(?,description),
+    video_url=COALESCE(?,video_url), tags=COALESCE(?,tags),
+    exercises=COALESCE(?,exercises), homework=COALESCE(?,homework),
+    sort_order=COALESCE(?,sort_order) WHERE id=?`)
+    .run(
+      title||null, description||null, video_url!==undefined?video_url:null,
+      tags?JSON.stringify(tags):null,
+      exercises?JSON.stringify(exercises):null,
+      homework?JSON.stringify(homework):null,
+      sort_order??null, req.params.id
+    );
+  await saveDraft(); res.json({ ok: true });
 });
 
 app.delete('/api/admin/lessons/:id', async (req, res) => {
-  const draft = cloneDraft(await readDraft());
-  for (const c of draft) for (const ch of (c.chapters||[])) {
-    const idx = (ch.lessons||[]).findIndex(l => l.id === req.params.id);
-    if (idx !== -1) { ch.lessons.splice(idx, 1); await writeDraft(draft); return res.json({ ok: true }); }
-  }
-  res.status(404).json({ error: 'not found' });
+  await _seedPromise;
+  db.prepare('DELETE FROM lessons WHERE id=?').run(req.params.id);
+  await saveDraft(); res.json({ ok: true });
 });
 
 // Quizzes
 app.put('/api/admin/quizzes/:chapter_id', async (req, res) => {
+  await _seedPromise;
   const { title, questions } = req.body;
-  const draft = cloneDraft(await readDraft());
-  let found = null;
-  for (const c of draft) for (const ch of (c.chapters||[])) if (ch.id === req.params.chapter_id) { found = ch; break; }
-  if (!found) return res.status(404).json({ error: 'chapter not found' });
-  if (!found.quiz) found.quiz = { id: 'qz_' + Date.now(), chapter_id: req.params.chapter_id, title: 'מבחן מסכם', questions: [] };
-  if (title     !== undefined) found.quiz.title     = title;
-  if (questions !== undefined) found.quiz.questions = questions;
-  await writeDraft(draft);
-  res.json({ ok: true });
+  const existing = db.prepare('SELECT id FROM quizzes WHERE chapter_id=?').get(req.params.chapter_id);
+  if (existing) {
+    db.prepare('UPDATE quizzes SET title=COALESCE(?,title), questions=COALESCE(?,questions) WHERE chapter_id=?')
+      .run(title||null, questions?JSON.stringify(questions):null, req.params.chapter_id);
+  } else {
+    const id = 'qz_' + Date.now();
+    db.prepare('INSERT INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)').run(id, req.params.chapter_id, title||'מבחן מסכם', JSON.stringify(questions||[]));
+  }
+  await saveDraft(); res.json({ ok: true });
 });
 
-// Publish — copies draft → published.json, busts cache
+// Publish — writes current DB state to published.json on GitHub, busts cache
 app.post('/api/admin/push', async (req, res) => {
-  const draft = await readDraft();
-  console.log(`[push] courses in draft: ${draft.length}, DATA_REPO: ${DATA_REPO}`);
-  await writeGitHubFile('published.json', draft, 'publish: admin pushed');
-  _pubCache = { data: null, sha: null, ts: 0 }; // bust cache
+  await _seedPromise;
+  const courses = getCurriculum();
+  console.log(`[push] courses in DB: ${courses.length}, DATA_REPO: ${DATA_REPO}`);
+  await publishSnapshot();
+  _ghCache = { data: null, sha: null, ts: 0 };
   curriculumVersion = Date.now();
-  res.json({ ok: true, version: curriculumVersion, courses: draft.length, repo: DATA_REPO || 'NOT SET' });
+  res.json({ ok: true, version: curriculumVersion, courses: courses.length, repo: DATA_REPO || 'NOT SET' });
 });
 
 app.get('/api/admin/export-curriculum', async (req, res) => {
-  const data = await readDraft();
+  await _seedPromise;
+  const data = getCurriculum();
   res.setHeader('Content-Disposition', 'attachment; filename="published.json"');
   res.json(data);
 });
