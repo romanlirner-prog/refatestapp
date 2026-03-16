@@ -15,7 +15,11 @@ app.use(express.json());
 
 const staticDir = process.env.VERCEL ? path.join(process.cwd()) : path.join(__dirname);
 app.use(express.static(staticDir));
+const APP_VERSION = '20260316-5';
 app.get('/', (req, res) => {
+  if (req.query.v !== APP_VERSION) {
+    return res.redirect(302, `/?v=${APP_VERSION}`);
+  }
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
