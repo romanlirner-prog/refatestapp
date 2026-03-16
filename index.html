@@ -2219,18 +2219,21 @@ function toggleFullscreen(el) {
     return;
   }
 
-  // Telegram WebView blocks requestFullscreen — go straight to overlay
-  const inTelegram = !!(window.Telegram?.WebApp?.initData || window.TelegramWebviewProxy);
-  if (inTelegram) { openFsOverlay(wrap); return; }
+  const tgPlatform = window.Telegram?.WebApp?.platform || '';
+  const isTgDesktop = ['tdesktop', 'macos', 'web', 'weba'].includes(tgPlatform)
+    || (!tgPlatform && !!(window.Telegram?.WebApp?.initData || window.TelegramWebviewProxy));
 
-  // iOS Safari: native video fullscreen
+  // Telegram Desktop blocks requestFullscreen — use overlay
+  if (isTgDesktop) { openFsOverlay(wrap); return; }
+
+  // iOS (Telegram or Safari): native video fullscreen
   const video = wrap.querySelector('video');
-  if (video?.webkitEnterFullscreen && !document.fullscreenEnabled) {
+  if (video?.webkitEnterFullscreen) {
     video.webkitEnterFullscreen();
     return;
   }
 
-  // Desktop browser: try native, fall back to overlay
+  // Android / Desktop browser: try native, fall back to overlay
   const fsReq = wrap.requestFullscreen || wrap.webkitRequestFullscreen;
   if (fsReq) {
     fsReq.call(wrap).catch(() => openFsOverlay(wrap));
