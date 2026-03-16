@@ -23,7 +23,8 @@ app.get('/', (req, res) => {
 });
 
 // ─── DB ────────────────────────────────────────────────────────────────
-const DB_PATH = process.env.VERCEL ? '/tmp/miniapp.db' : path.join(__dirname, 'miniapp.db');
+const DB_PATH        = process.env.VERCEL ? '/tmp/miniapp.db' : path.join(__dirname, 'miniapp.db');
+const CURRICULUM_JSON = path.join(__dirname, 'curriculum.json');
 const db = new DatabaseSync(DB_PATH);
 db.exec('PRAGMA journal_mode = WAL');
 
@@ -110,8 +111,30 @@ function normalisedCurriculum() {
 }
 
 // ─── SEED ──────────────────────────────────────────────────────────────
-// Seeds only when the DB is completely empty (first run / manual reset).
-// After that, SQLite is the single source of truth — admin edits live there.
+
+function seedFromJson(data) {
+  for (const course of data) {
+    db.prepare('INSERT OR REPLACE INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)')
+      .run(course.id, course.name, course.emoji || '📚', course.color || 'ct-blue', course.meta || '', course.sort_order || 0);
+    for (const ch of (course.chapters || [])) {
+      db.prepare('INSERT OR REPLACE INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)')
+        .run(ch.id, course.id, ch.title, ch.sort_order || 0);
+      if (ch.quiz) {
+        db.prepare('INSERT OR REPLACE INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)')
+          .run(ch.quiz.id, ch.id, ch.quiz.title || 'מבחן מסכם',
+               typeof ch.quiz.questions === 'string' ? ch.quiz.questions : JSON.stringify(ch.quiz.questions || []));
+      }
+      for (const ls of (ch.lessons || [])) {
+        db.prepare('INSERT OR REPLACE INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
+          .run(ls.id, ch.id, ls.title, ls.description || '', ls.video_url || '',
+               typeof ls.tags      === 'string' ? ls.tags      : JSON.stringify(ls.tags      || []),
+               typeof ls.exercises === 'string' ? ls.exercises : JSON.stringify(ls.exercises || []),
+               typeof ls.homework  === 'string' ? ls.homework  : JSON.stringify(ls.homework  || []),
+               ls.sort_order || 0);
+      }
+    }
+  }
+}
 
 function seedHardcoded() {
   const TEMPLATE = [
@@ -158,13 +181,52 @@ function seedHardcoded() {
   console.log('[Seed] Curriculum structure seeded — courses + chapters only, ready for admin');
 }
 
-function seedCurriculum() {
+async function seedCurriculum() {
+  if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO) {
+    try {
+      const token = process.env.GITHUB_TOKEN;
+      const repo  = process.env.GITHUB_REPO;
+      const res   = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum.json`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github+json',
+          'User-Agent': 'miniapp-server'
+        }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.content) {
+          const data = JSON.parse(Buffer.from(json.content, 'base64').toString('utf8'));
+          if (Array.isArray(data) && data.length > 0) {
+            db.exec('DELETE FROM quizzes; DELETE FROM lessons; DELETE FROM chapters; DELETE FROM courses;');
+            seedFromJson(data);
+            console.log('[Seed] Synced from GitHub ✓');
+            return;
+          }
+        }
+      }
+    } catch (e) { console.error('[Seed] GitHub failed:', e.message); }
+  }
+  // fallback: רק אם DB ריק
   const count = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
-  if (count > 0) { console.log('[Seed] DB has data — skipping'); return; }
+  if (count > 0) return;
+  const filePaths = [CURRICULUM_JSON, path.join(process.cwd(), 'curriculum.json')];
+  for (const p of filePaths) {
+    try {
+      if (fs.existsSync(p)) {
+        const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+        if (Array.isArray(data) && data.length > 0) {
+          seedFromJson(data);
+          console.log('[Seed] Loaded from', p);
+          return;
+        }
+      }
+    } catch {}
+  }
   seedHardcoded();
 }
 
-const _seedPromise = Promise.resolve(seedCurriculum());
+const _seedPromise = seedCurriculum();
 
 // ─── ONE-TIME MIGRATIONS ────────────────────────────────────────────────
 // Each migration runs exactly once, tracked by key in _migrations table.
