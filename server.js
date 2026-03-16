@@ -609,12 +609,19 @@ app.put('/api/admin/quizzes/:chapter_id', async (req, res) => {
   await saveDraft(); res.json({ ok: true });
 });
 
-// Publish — writes current DB state to published.json on GitHub, busts cache
+// Publish — writes current DB state to both draft.json and published.json
 app.post('/api/admin/push', async (req, res) => {
   await _seedPromise;
-  const courses = getCurriculum();
-  console.log(`[push] courses in DB: ${courses.length}, DATA_REPO: ${DATA_REPO}`);
-  await publishSnapshot();
+  const data = normalisedCurriculum();
+  console.log(`[push] courses in DB: ${data.length}, DATA_REPO: ${DATA_REPO}`);
+  // Write locally (dev) — update BOTH files so the folder reflects current state
+  if (!process.env.VERCEL) {
+    writeLocalDataFile('draft.json',     data);
+    writeLocalDataFile('published.json', data);
+  }
+  // Write to GitHub (prod)
+  await writeGitHubFile('draft.json',     data, 'publish: admin pushed');
+  await writeGitHubFile('published.json', data, 'publish: admin pushed');
   _ghCache = { data: null, sha: null, ts: 0 };
   curriculumVersion = Date.now();
   res.json({ ok: true, version: curriculumVersion, courses: courses.length, repo: DATA_REPO || 'NOT SET' });
