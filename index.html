@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>מתמטיקה עם רפאל</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -1052,9 +1055,9 @@ function navTo(screen, param) {
 //  BOOT
 // ══════════════════════════════════════
 (async () => {
-  // Load curriculum first
+  // Load curriculum first — cache:no-store forces Telegram webview to skip cache
   try {
-    const r = await fetch(`${API}/api/curriculum`);
+    const r = await fetch(`${API}/api/curriculum`, { cache: 'no-store' });
     if (r.ok) curriculum = await r.json();
   } catch {}
 
@@ -1071,7 +1074,7 @@ function navTo(screen, param) {
       if (_cvVersion === null) { _cvVersion = version; return; }
       if (version !== _cvVersion) {
         _cvVersion = version;
-        const r2 = await fetch(`${API}/api/curriculum`);
+        const r2 = await fetch(`${API}/api/curriculum`, { cache: 'no-store' });
         if (r2.ok) {
           curriculum = await r2.json();
           // Re-render current visible screen if it shows course content
@@ -1767,7 +1770,7 @@ function switchAdminTab(tab) {
 async function loadAdminData() {
   // Load fresh curriculum
   try {
-    const r = await fetch(`${API}/api/curriculum`);
+    const r = await fetch(`${API}/api/curriculum`, { cache: 'no-store' });
     if (r.ok) { curriculum = await r.json(); renderCourseTree(); }
   } catch {}
 
