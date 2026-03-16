@@ -122,7 +122,6 @@ let curriculumVersion = Date.now();
 
 // Called after every admin mutation — awaited before sending response
 async function saveToGitHub() {
-  curriculumVersion = Date.now();
   try {
     const data = getCurriculum();
     // Parse quiz.questions from string to array before saving
@@ -571,6 +570,14 @@ app.put('/api/admin/quizzes/:chapter_id', async (req, res) => {
 });
 
 // Export
+// Push curriculum to all users — bumps version (clients polling every 2s will refresh) + saves to GitHub
+app.post('/api/admin/push', async (req, res) => {
+  await _seedPromise;
+  await saveToGitHub();
+  curriculumVersion = Date.now();
+  res.json({ ok: true, version: curriculumVersion });
+});
+
 app.get('/api/admin/export-curriculum', async (req, res) => {
   await _seedPromise;
   const data = getCurriculum();
