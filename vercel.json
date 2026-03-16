@@ -5,7 +5,7 @@
       "src": "server.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["curriculum.json", "index.html", "rafael.jpg"]
+        "includeFiles": ["index.html", "rafael.jpg"]
       }
     }
   ],

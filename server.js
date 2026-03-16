@@ -15,7 +15,12 @@ app.use(express.json());
 
 const staticDir = process.env.VERCEL ? path.join(process.cwd()) : path.join(__dirname);
 app.use(express.static(staticDir));
-app.get('/', (req, res) => res.sendFile(path.join(staticDir, 'index.html')));
+app.get('/', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.sendFile(path.join(staticDir, 'index.html'));
+});
 
 // ─── DB ────────────────────────────────────────────────────────────────
 const DB_PATH = process.env.VERCEL ? '/tmp/miniapp.db' : path.join(__dirname, 'miniapp.db');
@@ -174,6 +179,11 @@ try {
     const deleted = db.prepare('DELETE FROM lessons').run();
     db.prepare("INSERT INTO _migrations (key) VALUES (?)").run('delete_seeded_lessons_v1');
     console.log(`[Migration] Deleted ${deleted.changes} seeded lessons — chapters remain`);
+  }
+  if (!db.prepare("SELECT key FROM _migrations WHERE key='delete_all_lessons_v3'").get()) {
+    const deleted = db.prepare('DELETE FROM lessons').run();
+    db.prepare("INSERT INTO _migrations (key) VALUES (?)").run('delete_all_lessons_v3');
+    console.log(`[Migration] v3 — wiped ${deleted.changes} lessons from DB`);
   }
 } catch(e) { console.error('[Migration error]', e.message); }
 
