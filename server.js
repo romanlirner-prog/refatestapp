@@ -112,80 +112,28 @@ function seedHardcoded() {
   const TEMPLATE = [
     {
       id: 'חטיבה-תיכון', name: 'חטיבה → תיכון', emoji: '📐', color: 'ct-blue',
-      meta: '32 שיעורים · הכנה מלאה', sort_order: 0,
+      meta: '', sort_order: 0,
       chapters: [
-        { id: 'ch1', title: 'מספרים ושברים', sort_order: 0,
-          quiz: { id: 'qz1', title: 'מבחן: מספרים ושברים', questions: [] },
-          lessons: [
-            { id: 'c1l1', title: 'מספרים טבעיים ושלמים', description: 'נלמד על מספרים שלמים, ערך מוחלט וסדר פעולות חשבון.', tags: ['תיאוריה'], exercises: [], homework: [] },
-            { id: 'c1l2', title: 'שברים רגילים וחישובים', description: 'חיבור, חיסור, כפל וחילוק של שברים. פישוט שברים.', tags: ['תיאוריה','תרגול'], exercises: [], homework: [] },
-            { id: 'c1l3', title: 'עשרוניים ואחוזים', description: 'המרה בין עשרוניים לאחוזים ופתרון שאלות אחוזים.', tags: ['תרגול'], exercises: [], homework: [] },
-          ]
-        },
-        { id: 'ch2', title: 'אלגברה — ביטויים ומשוואות', sort_order: 1,
-          quiz: { id: 'qz2', title: 'מבחן: אלגברה', questions: [] },
-          lessons: [
-            { id: 'c2l1', title: 'ביטויים אלגבריים', description: 'פישוט ביטויים, הוצאת גורם משותף וכפל סוגריים.', tags: ['תיאוריה'], exercises: [], homework: [] },
-            { id: 'c2l2', title: 'משוואה ממעלה ראשונה', description: 'פתרון משוואות לינאריות ושאלות מילוליות.', tags: ['תרגול'], exercises: [], homework: [] },
-            { id: 'c2l3', title: 'משוואה ממעלה שנייה', description: 'פתרון ריבועית: פירוק לגורמים ונוסחת שורשים.', tags: ['תיאוריה','תרגול'], exercises: [], homework: [] },
-            { id: 'c2l4', title: 'אי-שוויונות', description: 'פתרון אי-שוויונות ויצוג על ציר המספרים.', tags: ['תרגול'], exercises: [], homework: [] },
-          ]
-        },
-        { id: 'ch3', title: 'גאומטריה', sort_order: 2,
-          quiz: { id: 'qz3', title: 'מבחן: גאומטריה', questions: [] },
-          lessons: [
-            { id: 'c3l1', title: 'זוויות ומשפטים בסיסיים', description: 'זוויות משלימות, זוויות במשולש ומשפטים על קווים מקבילים.', tags: ['תיאוריה'], exercises: [], homework: [] },
-            { id: 'c3l2', title: 'משפט פיתגורס', description: 'הכרת המשפט, שימוש ובדיקה.', tags: ['תרגול'], exercises: [], homework: [] },
-            { id: 'c3l3', title: 'שטחים ונפחים', description: 'חישוב שטח ונפח של צורות מישוריות ותלת-מימדיות.', tags: ['תיאוריה','תרגול'], exercises: [], homework: [] },
-          ]
-        },
-        { id: 'ch4', title: 'פונקציות לינאריות', sort_order: 3,
-          quiz: { id: 'qz4', title: 'מבחן: פונקציות', questions: [] },
-          lessons: [
-            { id: 'c4l1', title: 'מושגי יסוד בפונקציה', description: 'תחום, טווח, נקודת חיתוך עם הצירים.', tags: ['תיאוריה'], exercises: [], homework: [] },
-            { id: 'c4l2', title: 'שיפוע וקו ישר', description: 'חישוב שיפוע ומשוואת קו ישר.', tags: ['תרגול'], exercises: [], homework: [] },
-          ]
-        },
-        { id: 'ch5', title: 'סטטיסטיקה', sort_order: 4,
-          quiz: { id: 'qz5', title: 'מבחן: סטטיסטיקה', questions: [] },
-          lessons: [
-            { id: 'c5l1', title: 'ממוצע, חציון, שכיח', description: 'חישוב מדדי מיקום מרכזיים.', tags: ['תיאוריה'], exercises: [], homework: [] },
-            { id: 'c5l2', title: 'הסתברות בסיסית', description: 'חישוב הסתברות של אירועים פשוטים ומורכבים.', tags: ['תרגול'], exercises: [], homework: [] },
-          ]
-        },
+        { id: 'ch1', title: 'מספרים ושברים',            sort_order: 0, quiz: { id: 'qz1', title: 'מבחן: מספרים ושברים' } },
+        { id: 'ch2', title: 'אלגברה — ביטויים ומשוואות', sort_order: 1, quiz: { id: 'qz2', title: 'מבחן: אלגברה' } },
+        { id: 'ch3', title: 'גאומטריה',                  sort_order: 2, quiz: { id: 'qz3', title: 'מבחן: גאומטריה' } },
+        { id: 'ch4', title: 'פונקציות לינאריות',         sort_order: 3, quiz: { id: 'qz4', title: 'מבחן: פונקציות' } },
+        { id: 'ch5', title: 'סטטיסטיקה',                sort_order: 4, quiz: { id: 'qz5', title: 'מבחן: סטטיסטיקה' } },
       ]
     },
     {
       id: 'הכנה לבגרות', name: 'הכנה לבגרות', emoji: '📝', color: 'ct-green',
-      meta: '48 שיעורים · 3 רמות', sort_order: 1,
+      meta: '', sort_order: 1,
       chapters: [
-        { id: 'bg1', title: 'חזרה על בסיס', sort_order: 0,
-          quiz: { id: 'qz6', title: 'מבחן: חזרה על בסיס', questions: [] },
-          lessons: [
-            { id: 'b1l1', title: 'אלגברה — חזרה מהירה', description: 'חזרה על נושאי אלגברה מהחטיבה.', tags: ['חזרה'], exercises: [], homework: [] },
-            { id: 'b1l2', title: 'פונקציות — חזרה', description: 'גרפים, נקודות קיצון ואסימפטוטות.', tags: ['חזרה','גרף'], exercises: [], homework: [] },
-          ]
-        },
-        { id: 'bg2', title: 'מבנה שאלון הבגרות', sort_order: 1,
-          quiz: { id: 'qz7', title: 'מבחן: אסטרטגיה', questions: [] },
-          lessons: [
-            { id: 'b2l1', title: 'הכרת השאלון ואסטרטגיה', description: 'מבנה שאלון 806, ניהול זמן ואסטרטגיית פתרון.', tags: ['אסטרטגיה'], exercises: [], homework: [] },
-            { id: 'b2l2', title: 'שאלות מילוליות — שיטה', description: 'שיטת 4 שלבים לפתרון שאלות מילוליות.', tags: ['שיטה'], exercises: [], homework: [] },
-          ]
-        },
+        { id: 'bg1', title: 'חזרה על בסיס',        sort_order: 0, quiz: { id: 'qz6', title: 'מבחן: חזרה על בסיס' } },
+        { id: 'bg2', title: 'מבנה שאלון הבגרות',   sort_order: 1, quiz: { id: 'qz7', title: 'מבחן: אסטרטגיה' } },
       ]
     },
     {
       id: 'בגרות מורחבת', name: "בגרות מורחבת (5 יח')", emoji: '🏆', color: 'ct-amber',
-      meta: '28 שיעורים · רמה גבוהה', sort_order: 2,
+      meta: '', sort_order: 2,
       chapters: [
-        { id: 'mr1', title: 'חשבון דיפרנציאלי', sort_order: 0,
-          quiz: { id: 'qz8', title: 'מבחן: נגזרות', questions: [] },
-          lessons: [
-            { id: 'm1l1', title: 'גבולות ורציפות', description: 'חישוב גבולות ובדיקת רציפות.', tags: ['תיאוריה'], exercises: [], homework: [] },
-            { id: 'm1l2', title: 'נגזרות — כללים', description: 'כללי גזירה: חיבור, מכפלה, מנה, שרשרת.', tags: ['תרגול'], exercises: [], homework: [] },
-          ]
-        }
+        { id: 'mr1', title: 'חשבון דיפרנציאלי', sort_order: 0, quiz: { id: 'qz8', title: 'מבחן: נגזרות' } },
       ]
     }
   ];
@@ -198,16 +146,11 @@ function seedHardcoded() {
         .run(ch.id, course.id, ch.title, ch.sort_order);
       if (ch.quiz) {
         db.prepare('INSERT OR IGNORE INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)')
-          .run(ch.quiz.id, ch.id, ch.quiz.title, JSON.stringify(ch.quiz.questions));
+          .run(ch.quiz.id, ch.id, ch.quiz.title, '[]');
       }
-      ch.lessons.forEach((ls, li) => {
-        db.prepare('INSERT OR IGNORE INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
-          .run(ls.id, ch.id, ls.title, ls.description, '',
-               JSON.stringify(ls.tags), JSON.stringify(ls.exercises), JSON.stringify(ls.homework), li);
-      });
     }
   }
-  console.log('[Seed] Fresh curriculum seeded — all video_url empty, ready for admin');
+  console.log('[Seed] Curriculum structure seeded — courses + chapters only, ready for admin');
 }
 
 function seedCurriculum() {
@@ -226,6 +169,11 @@ try {
     db.prepare("UPDATE quizzes SET questions='[]'").run();
     db.prepare("INSERT INTO _migrations (key) VALUES (?)").run('clear_quiz_questions_v1');
     console.log('[Migration] Cleared all dummy quiz questions');
+  }
+  if (!db.prepare("SELECT key FROM _migrations WHERE key='delete_seeded_lessons_v1'").get()) {
+    const deleted = db.prepare('DELETE FROM lessons').run();
+    db.prepare("INSERT INTO _migrations (key) VALUES (?)").run('delete_seeded_lessons_v1');
+    console.log(`[Migration] Deleted ${deleted.changes} seeded lessons — chapters remain`);
   }
 } catch(e) { console.error('[Migration error]', e.message); }
 
