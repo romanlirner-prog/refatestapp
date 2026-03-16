@@ -100,18 +100,22 @@ const DATA_REPO = process.env.DATA_GITHUB_REPO || process.env.GITHUB_REPO;
 async function writeGitHubFile(filename, data, message) {
   const token = process.env.GITHUB_TOKEN;
   const repo  = DATA_REPO;
-  if (!token || !repo) return;
+  console.log(`[writeGitHubFile] repo=${repo} file=${filename} token=${token ? 'SET' : 'MISSING'}`);
+  if (!token || !repo) { console.error('[writeGitHubFile] missing token or repo — skipping'); return; }
   try {
     const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
     const apiBase = `https://api.github.com/repos/${repo}/contents/${filename}`;
     const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'User-Agent': 'miniapp-server' };
-    const getJson = await fetch(apiBase, { headers }).then(r => r.ok ? r.json() : {});
+    const getRes  = await fetch(apiBase, { headers });
+    const getJson = getRes.ok ? await getRes.json() : {};
+    console.log(`[writeGitHubFile] GET ${filename} status=${getRes.status} sha=${getJson.sha || 'none'}`);
     const putRes  = await fetch(apiBase, { method: 'PUT', headers,
       body: JSON.stringify({ message, content, ...(getJson.sha && { sha: getJson.sha }) })
     });
+    const putBody = await putRes.text();
     if (putRes.ok) console.log(`[GitHub] ${filename} updated ✓`);
-    else console.error(`[GitHub] ${filename} failed:`, await putRes.text());
-  } catch (e) { console.error(`[GitHub ${filename}]`, e.message); }
+    else console.error(`[GitHub] ${filename} PUT failed (${putRes.status}):`, putBody);
+  } catch (e) { console.error(`[GitHub ${filename}] exception:`, e.message); }
 }
 
 // Normalise quiz.questions string → array
@@ -595,10 +599,12 @@ app.put('/api/admin/quizzes/:chapter_id', async (req, res) => {
 // Publish — writes current DB state to published.json on GitHub, busts cache
 app.post('/api/admin/push', async (req, res) => {
   await _seedPromise;
+  const courses = getCurriculum();
+  console.log(`[push] courses in DB: ${courses.length}, DATA_REPO: ${DATA_REPO}`);
   await publishSnapshot();
-  _ghCache = { data: null, sha: null, ts: 0 }; // bust cache so next poll fetches fresh
+  _ghCache = { data: null, sha: null, ts: 0 };
   curriculumVersion = Date.now();
-  res.json({ ok: true, version: curriculumVersion });
+  res.json({ ok: true, version: curriculumVersion, courses: courses.length, repo: DATA_REPO || 'NOT SET' });
 });
 
 app.get('/api/admin/export-curriculum', async (req, res) => {
