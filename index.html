@@ -1058,9 +1058,12 @@ function navTo(screen, param) {
     if (r.ok) curriculum = await r.json();
   } catch {}
 
-  // Poll for admin changes every 2s — refresh curriculum silently if version changed
+  // Poll for admin changes every 10s — refresh curriculum silently if version changed
   let _cvVersion = null;
+  let _polling   = false;
   setInterval(async () => {
+    if (_polling) return;
+    _polling = true;
     try {
       const r = await fetch(`${API}/api/curriculum-version`);
       if (!r.ok) return;
@@ -1073,12 +1076,13 @@ function navTo(screen, param) {
           curriculum = await r2.json();
           // Re-render current visible screen if it shows course content
           const active = document.querySelector('.screen.active');
-          if (active?.id === 'screen-home')    renderHome();
+          if (active?.id === 'screen-home')         renderHome();
           else if (active?.id === 'screen-lessons') renderLessons(currentCourseId);
         }
       }
     } catch {}
-  }, 2_000);
+    finally { _polling = false; }
+  }, 10_000);
 
   if (tgUser?.id) {
     try {
@@ -1210,7 +1214,7 @@ function renderHome() {
     adminBtn.remove();
   }
 
-  const firstCourseId = planData.courses[0];
+  const firstCourseId = getPlanCourses(plan)[0];
   lastCourseId = firstCourseId;
   renderGradeGrid();
   renderMinimap();
@@ -1522,7 +1526,7 @@ function openQuiz(courseId, chapterId) {
   const ch = c?.chapters.find(ch => ch.id === chapterId);
   if (!ch?.quiz) return;
 
-  currentQuiz = JSON.parse(ch.quiz.questions || '[]');
+  currentQuiz = parseQuestions(ch.quiz.questions);
   currentQuizCourseId   = courseId;
   currentQuizChapterId  = chapterId;
   quizAnswers   = {};
@@ -1700,6 +1704,12 @@ async function pushCurriculum(btn) {
   const orig = btn.textContent;
   btn.disabled = true; btn.textContent = '⏳ שולח...';
   try {
+    // Auto-save any open edit sheet so unsaved links are included in the publish
+    const overlay = document.getElementById('edit-overlay');
+    if (overlay.classList.contains('open') &&
+        ['edit-lesson','edit-chapter','edit-course'].includes(editContext.type)) {
+      await saveEdit();
+    }
     const r = await fetch(`${API}/api/admin/push`, { method: 'POST' });
     if (!r.ok) throw new Error('שגיאת שרת');
     btn.textContent = '✅ פורסם!';
@@ -1828,7 +1838,7 @@ function renderCourseTree() {
                 </div>`).join('')}
               <div class="tree-quiz-row" onclick="openEditSheet('edit-quiz','${ch.id}')">
                 <span class="tree-quiz-badge">📝</span>
-                <span class="tree-quiz-name">${ch.quiz?.title||'מבחן מסכם'} (${JSON.parse(ch.quiz?.questions||'[]').length} שאלות)</span>
+                <span class="tree-quiz-name">${ch.quiz?.title||'מבחן מסכם'} (${parseQuestions(ch.quiz?.questions).length} שאלות)</span>
                 <button class="tree-btn" onclick="event.stopPropagation();openEditSheet('edit-quiz','${ch.id}')">✏️</button>
               </div>
             </div>
@@ -2251,6 +2261,12 @@ function fixVideoUrl(url) {
     .replace('?dl=0', '?raw=1');
 }
 
+// ── QUIZ QUESTIONS — handle both string and pre-parsed array ─────────────────
+function parseQuestions(qs) {
+  if (Array.isArray(qs)) return qs;
+  try { return JSON.parse(qs || '[]'); } catch { return []; }
+}
+
 // ── EXERCISE VIDEOS ──────────────────────────────────────
 function renderExerciseVideos(exercises) {
   if (!exercises || !exercises.length) {
@@ -2284,20 +2300,13 @@ function renderExerciseVideos(exercises) {
 }
 
 // ── HOMEWORK WITH SOLUTIONS ──────────────────────────────
-function fixImageUrl(url) {
-  if (!url) return '';
-  return url
-    .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
-    .replace('?dl=0', '?raw=1');
-}
-
 function renderHomeworkList(homework) {
   if (!homework.length) return '<div style="color:var(--text-3);font-size:16px">אין שיעורי בית לשיעור זה</div>';
   return homework.map((h, i) => {
     const imgUrl = typeof h === 'object' ? (h.image_url || '') : '';
     const text   = typeof h === 'string' ? h : (h.text || '');
     const solUrl = typeof h === 'object' ? (h.solution_url || '') : '';
-    const imgSrc = fixImageUrl(imgUrl);
+    const imgSrc = fixVideoUrl(imgUrl);
     const content = imgSrc
       ? `<img src="${imgSrc}" alt="תרגיל ${i+1}" style="width:100%;border-radius:8px;display:block;margin-bottom:8px" loading="lazy">`
       : `<div class="hw-text">${text}</div>`;

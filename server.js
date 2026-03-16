@@ -497,7 +497,7 @@ app.get('/api/admin/stats', (req, res) => {
 
 app.get('/api/admin/courses', async (req, res) => {
   await _seedPromise;
-  res.json(getCurriculum());
+  res.json(normalisedCurriculum());
 });
 
 // ─── ADMIN CURRICULUM CRUD ─────────────────────────────────────────────
