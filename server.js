@@ -96,48 +96,59 @@ try { db.exec("ALTER TABLE users ADD COLUMN completed_lessons TEXT DEFAULT '{}'"
 // Set DATA_GITHUB_REPO=owner/repo in Vercel env vars pointing to miniapp-data repo.
 const DATA_REPO = process.env.DATA_GITHUB_REPO || process.env.GITHUB_REPO;
 
-// Writes the published snapshot to published.json on GitHub.
-// Called ONLY from the explicit push endpoint — never on individual saves.
-async function publishToGitHub(data) {
+// Generic GitHub file writer
+async function writeGitHubFile(filename, data, message) {
   const token = process.env.GITHUB_TOKEN;
   const repo  = DATA_REPO;
   if (!token || !repo) return;
   try {
     const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
-    const apiBase = `https://api.github.com/repos/${repo}/contents/published.json`;
-    const headers = {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github+json',
-      'Content-Type': 'application/json',
-      'User-Agent': 'miniapp-server'
-    };
-    const getRes  = await fetch(apiBase, { headers });
-    const getJson = getRes.ok ? await getRes.json() : {};
-    const sha = getJson.sha; // undefined if file doesn't exist yet — GitHub will create it
-    const putRes = await fetch(apiBase, {
-      method: 'PUT', headers,
-      body: JSON.stringify({ message: 'publish: admin pushed curriculum update', content, ...(sha && { sha }) })
+    const apiBase = `https://api.github.com/repos/${repo}/contents/${filename}`;
+    const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'User-Agent': 'miniapp-server' };
+    const getJson = await fetch(apiBase, { headers }).then(r => r.ok ? r.json() : {});
+    const putRes  = await fetch(apiBase, { method: 'PUT', headers,
+      body: JSON.stringify({ message, content, ...(getJson.sha && { sha: getJson.sha }) })
     });
-    if (putRes.ok) console.log('[GitHub] published.json updated ✓');
-    else console.error('[GitHub] publish failed:', await putRes.text());
-  } catch (e) { console.error('[GitHub publish]', e.message); }
+    if (putRes.ok) console.log(`[GitHub] ${filename} updated ✓`);
+    else console.error(`[GitHub] ${filename} failed:`, await putRes.text());
+  } catch (e) { console.error(`[GitHub ${filename}]`, e.message); }
+}
+
+// Normalise quiz.questions string → array
+function normalisedCurriculum() {
+  const data = getCurriculum();
+  for (const c of data)
+    for (const ch of c.chapters)
+      if (ch.quiz && typeof ch.quiz.questions === 'string')
+        try { ch.quiz.questions = JSON.parse(ch.quiz.questions); } catch { ch.quiz.questions = []; }
+  return data;
+}
+
+// Called on every individual admin save — keeps draft.json in sync so the next
+// cold-start instance seeds the latest edits (not stale published.json)
+async function saveDraft() {
+  await writeGitHubFile('draft.json', normalisedCurriculum(), 'draft: admin saved');
+}
+
+// Called only on explicit "פרסם" — copies current state to published.json
+async function publishSnapshot() {
+  await writeGitHubFile('published.json', normalisedCurriculum(), 'publish: admin pushed');
 }
 
 // Fallback in-memory version (used when GitHub env vars not configured)
 let curriculumVersion = Date.now();
 
-// GitHub cache — shared version source across all Vercel instances
+// GitHub cache for published.json — shared version source across all Vercel instances
 let _ghCache = { data: null, sha: null, ts: 0 };
-const GH_CACHE_TTL = 5000; // 5 seconds
+const GH_CACHE_TTL = 5000;
 
 async function getGitHubCurriculum() {
   const token = process.env.GITHUB_TOKEN;
-  const repo  = DATA_REPO;
-  if (!token || !repo) return null;
+  if (!token || !DATA_REPO) return null;
   const now = Date.now();
   if (_ghCache.data && (now - _ghCache.ts) < GH_CACHE_TTL) return _ghCache;
   try {
-    const res = await fetch(`https://api.github.com/repos/${repo}/contents/published.json`, {
+    const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/published.json`, {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
     });
     if (res.ok) {
@@ -149,21 +160,7 @@ async function getGitHubCurriculum() {
       }
     }
   } catch (e) { console.error('[GHCache]', e.message); }
-  return _ghCache.data ? _ghCache : null; // return stale on error
-}
-
-// Called after every admin mutation — awaited before sending response
-// Builds the publish payload (normalises quiz.questions) and writes to published.json
-async function publishSnapshot() {
-  const data = getCurriculum();
-  for (const c of data) {
-    for (const ch of c.chapters) {
-      if (ch.quiz && typeof ch.quiz.questions === 'string') {
-        try { ch.quiz.questions = JSON.parse(ch.quiz.questions); } catch { ch.quiz.questions = []; }
-      }
-    }
-  }
-  await publishToGitHub(data);
+  return _ghCache.data ? _ghCache : null;
 }
 
 // ─── SEED ──────────────────────────────────────────────────────────────
@@ -173,7 +170,9 @@ async function seedCurriculum() {
     try {
       const token = process.env.GITHUB_TOKEN;
       const repo  = DATA_REPO;
-      const res   = await fetch(`https://api.github.com/repos/${repo}/contents/published.json`, {
+      // Seed from draft.json (latest admin edits) so cold-start instances
+      // always have up-to-date data, even before an explicit publish.
+      const res = await fetch(`https://api.github.com/repos/${repo}/contents/draft.json`, {
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
       });
       if (res.ok) {
@@ -181,10 +180,9 @@ async function seedCurriculum() {
         if (json.content) {
           const data = JSON.parse(Buffer.from(json.content, 'base64').toString('utf8'));
           if (Array.isArray(data) && data.length > 0) {
-            // מחיקה ו-reseed — תמיד מ-GitHub
             db.exec('DELETE FROM quizzes; DELETE FROM lessons; DELETE FROM chapters; DELETE FROM courses;');
             seedFromJson(data);
-            console.log('[Seed] Synced from GitHub ✓');
+            console.log('[Seed] Synced from draft.json ✓');
             return;
           }
         }
@@ -494,7 +492,7 @@ app.post('/api/admin/courses', async (req, res) => {
   if (!id || !name) return res.status(400).json({ error: 'id and name required' });
   const n = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
   db.prepare('INSERT INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)').run(id,name,emoji,color,meta,n);
-  res.json({ ok: true });
+  await saveDraft(); res.json({ ok: true });
 });
 
 app.put('/api/admin/courses/:id', async (req, res) => {
@@ -502,7 +500,7 @@ app.put('/api/admin/courses/:id', async (req, res) => {
   const { name, emoji, color, meta, sort_order } = req.body;
   db.prepare('UPDATE courses SET name=COALESCE(?,name), emoji=COALESCE(?,emoji), color=COALESCE(?,color), meta=COALESCE(?,meta), sort_order=COALESCE(?,sort_order) WHERE id=?')
     .run(name||null, emoji||null, color||null, meta||null, sort_order??null, req.params.id);
-  res.json({ ok: true });
+  await saveDraft(); res.json({ ok: true });
 });
 
 app.delete('/api/admin/courses/:id', async (req, res) => {
@@ -515,7 +513,7 @@ app.delete('/api/admin/courses/:id', async (req, res) => {
   }
   db.prepare('DELETE FROM chapters WHERE course_id=?').run(cid);
   db.prepare('DELETE FROM courses WHERE id=?').run(cid);
-  res.json({ ok: true });
+  await saveDraft(); res.json({ ok: true });
 });
 
 // Chapters
@@ -525,14 +523,14 @@ app.post('/api/admin/chapters', async (req, res) => {
   if (!id || !course_id || !title) return res.status(400).json({ error: 'missing fields' });
   const n = db.prepare('SELECT COUNT(*) as n FROM chapters WHERE course_id=?').get(course_id).n;
   db.prepare('INSERT INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)').run(id,course_id,title,n);
-  res.json({ ok: true });
+  await saveDraft(); res.json({ ok: true });
 });
 
 app.put('/api/admin/chapters/:id', async (req, res) => {
   await _seedPromise;
   const { title, sort_order } = req.body;
   db.prepare('UPDATE chapters SET title=COALESCE(?,title), sort_order=COALESCE(?,sort_order) WHERE id=?').run(title||null, sort_order??null, req.params.id);
-  res.json({ ok: true });
+  await saveDraft(); res.json({ ok: true });
 });
 
 app.delete('/api/admin/chapters/:id', async (req, res) => {
@@ -541,7 +539,7 @@ app.delete('/api/admin/chapters/:id', async (req, res) => {
   db.prepare('DELETE FROM lessons WHERE chapter_id=?').run(cid);
   db.prepare('DELETE FROM quizzes WHERE chapter_id=?').run(cid);
   db.prepare('DELETE FROM chapters WHERE id=?').run(cid);
-  res.json({ ok: true });
+  await saveDraft(); res.json({ ok: true });
 });
 
 // Lessons
@@ -552,7 +550,7 @@ app.post('/api/admin/lessons', async (req, res) => {
   const n = db.prepare('SELECT COUNT(*) as n FROM lessons WHERE chapter_id=?').get(chapter_id).n;
   db.prepare('INSERT INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
     .run(id,chapter_id,title,description,video_url,JSON.stringify(tags),JSON.stringify(exercises),JSON.stringify(homework),n);
-  res.json({ ok: true });
+  await saveDraft(); res.json({ ok: true });
 });
 
 app.put('/api/admin/lessons/:id', async (req, res) => {
@@ -570,13 +568,13 @@ app.put('/api/admin/lessons/:id', async (req, res) => {
       homework?JSON.stringify(homework):null,
       sort_order??null, req.params.id
     );
-  res.json({ ok: true });
+  await saveDraft(); res.json({ ok: true });
 });
 
 app.delete('/api/admin/lessons/:id', async (req, res) => {
   await _seedPromise;
   db.prepare('DELETE FROM lessons WHERE id=?').run(req.params.id);
-  res.json({ ok: true });
+  await saveDraft(); res.json({ ok: true });
 });
 
 // Quizzes
@@ -591,7 +589,7 @@ app.put('/api/admin/quizzes/:chapter_id', async (req, res) => {
     const id = 'qz_' + Date.now();
     db.prepare('INSERT INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)').run(id, req.params.chapter_id, title||'מבחן מסכם', JSON.stringify(questions||[]));
   }
-  res.json({ ok: true });
+  await saveDraft(); res.json({ ok: true });
 });
 
 // Publish — writes current DB state to published.json on GitHub, busts cache
