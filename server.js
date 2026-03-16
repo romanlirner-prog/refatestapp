@@ -10,8 +10,6 @@ const path    = require('path');
 const fs      = require('fs');
 const { DatabaseSync } = require('node:sqlite');
 
-const CURRICULUM_JSON = path.join(__dirname, 'curriculum.json'); // local fallback only
-
 const app = express();
 app.use(express.json());
 
@@ -91,34 +89,12 @@ db.exec(`
 
 try { db.exec("ALTER TABLE users ADD COLUMN completed_lessons TEXT DEFAULT '{}'"); } catch {}
 
-// ─── GITHUB ────────────────────────────────────────────────────────────
-// The data repo is separate from the code repo so deploys never overwrite content.
-// Set DATA_GITHUB_REPO=owner/repo in Vercel env vars pointing to miniapp-data repo.
-const DATA_REPO = process.env.DATA_GITHUB_REPO || process.env.GITHUB_REPO;
+// ─── VERSION TRACKING ──────────────────────────────────────────────────
+// Bumped on every admin save — the client polls this to detect changes
+// and re-fetch the curriculum without a full page reload.
+let curriculumVersion = Date.now();
 
-// Generic GitHub file writer
-async function writeGitHubFile(filename, data, message) {
-  const token = process.env.GITHUB_TOKEN;
-  const repo  = DATA_REPO;
-  console.log(`[writeGitHubFile] repo=${repo} file=${filename} token=${token ? 'SET' : 'MISSING'}`);
-  if (!token || !repo) { console.error('[writeGitHubFile] missing token or repo — skipping'); return; }
-  try {
-    const content = Buffer.from(JSON.stringify(data, null, 2)).toString('base64');
-    const apiBase = `https://api.github.com/repos/${repo}/contents/${filename}`;
-    const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'User-Agent': 'miniapp-server' };
-    const getRes  = await fetch(apiBase, { headers });
-    const getJson = getRes.ok ? await getRes.json() : {};
-    console.log(`[writeGitHubFile] GET ${filename} status=${getRes.status} sha=${getJson.sha || 'none'}`);
-    const putRes  = await fetch(apiBase, { method: 'PUT', headers,
-      body: JSON.stringify({ message, content, ...(getJson.sha && { sha: getJson.sha }) })
-    });
-    const putBody = await putRes.text();
-    if (putRes.ok) console.log(`[GitHub] ${filename} updated ✓`);
-    else console.error(`[GitHub] ${filename} PUT failed (${putRes.status}):`, putBody);
-  } catch (e) { console.error(`[GitHub ${filename}] exception:`, e.message); }
-}
-
-// Normalise quiz.questions string → array
+// Normalise quiz.questions string → array (SQLite stores as TEXT)
 function normalisedCurriculum() {
   const data = getCurriculum();
   for (const c of data)
@@ -128,149 +104,66 @@ function normalisedCurriculum() {
   return data;
 }
 
-// Called on every individual admin save — keeps draft.json in sync so the next
-// cold-start instance seeds the latest edits (not stale published.json)
-// Write to local miniapp-data dir (for local dev) and/or GitHub (for Vercel)
-function writeLocalDataFile(filename, data) {
-  const localPath = path.join(__dirname, '..', 'miniapp-data', filename);
-  try {
-    fs.writeFileSync(localPath, JSON.stringify(data, null, 2));
-    console.log(`[Local] ${filename} updated ✓`);
-  } catch (e) { console.error(`[Local] ${filename} write failed:`, e.message); }
-}
-
-async function saveDraft() {
-  const data = normalisedCurriculum();
-  if (!process.env.VERCEL) writeLocalDataFile('draft.json', data);
-  await writeGitHubFile('draft.json', data, 'draft: admin saved');
-}
-
-// Called only on explicit "פרסם" — copies current state to published.json
-async function publishSnapshot() {
-  const data = normalisedCurriculum();
-  if (!process.env.VERCEL) writeLocalDataFile('published.json', data);
-  await writeGitHubFile('published.json', data, 'publish: admin pushed');
-}
-
-// Fallback in-memory version (used when GitHub env vars not configured)
-let curriculumVersion = Date.now();
-
-// GitHub cache for published.json — shared version source across all Vercel instances
-let _ghCache = { data: null, sha: null, ts: 0 };
-const GH_CACHE_TTL = 5000;
-
-async function getGitHubCurriculum() {
-  const token = process.env.GITHUB_TOKEN;
-  if (!token || !DATA_REPO) return null;
-  const now = Date.now();
-  if (_ghCache.data && (now - _ghCache.ts) < GH_CACHE_TTL) return _ghCache;
-  try {
-    const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/published.json`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
-    });
-    if (res.ok) {
-      const json = await res.json();
-      if (json.content) {
-        const data = JSON.parse(Buffer.from(json.content, 'base64').toString('utf8'));
-        _ghCache = { data, sha: json.sha, ts: now };
-        return _ghCache;
-      }
-    }
-  } catch (e) { console.error('[GHCache]', e.message); }
-  return _ghCache.data ? _ghCache : null;
-}
-
 // ─── SEED ──────────────────────────────────────────────────────────────
-async function seedCurriculum() {
-  // תמיד ננסה לסנכרן מ-GitHub קודם
-  if (process.env.GITHUB_TOKEN && DATA_REPO) {
-    try {
-      const token = process.env.GITHUB_TOKEN;
-      const repo  = DATA_REPO;
-      // Seed from draft.json (latest admin edits) so cold-start instances
-      // always have up-to-date data, even before an explicit publish.
-      const res = await fetch(`https://api.github.com/repos/${repo}/contents/draft.json`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.content) {
-          const data = JSON.parse(Buffer.from(json.content, 'base64').toString('utf8'));
-          if (Array.isArray(data) && data.length > 0) {
-            db.exec('DELETE FROM quizzes; DELETE FROM lessons; DELETE FROM chapters; DELETE FROM courses;');
-            seedFromJson(data);
-            console.log('[Seed] Synced from draft.json ✓');
-            return;
-          }
-        }
-      }
-    } catch (e) { console.error('[Seed] GitHub failed:', e.message); }
-  }
-
-  // fallback: רק אם DB ריק
-  const count = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
-  if (count > 0) return;
-  const filePaths = [CURRICULUM_JSON, path.join(process.cwd(), 'curriculum.json')];
-  for (const p of filePaths) {
-    try {
-      if (fs.existsSync(p)) {
-        const data = JSON.parse(fs.readFileSync(p, 'utf8'));
-        if (Array.isArray(data) && data.length > 0) {
-          seedFromJson(data);
-          console.log('[Seed] Loaded from', p);
-          return;
-        }
-      }
-    } catch {}
-  }
-  seedHardcoded();
-}
-
-function seedFromJson(courses) {
-  for (const course of courses) {
-    db.prepare('INSERT OR IGNORE INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)')
-      .run(course.id, course.name, course.emoji||'📚', course.color||'ct-blue', course.meta||'', course.sort_order||0);
-    for (const ch of (course.chapters||[])) {
-      db.prepare('INSERT OR IGNORE INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)')
-        .run(ch.id, course.id, ch.title, ch.sort_order||0);
-      if (ch.quiz) {
-        const qs = Array.isArray(ch.quiz.questions) ? JSON.stringify(ch.quiz.questions) : (ch.quiz.questions || '[]');
-        db.prepare('INSERT OR IGNORE INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)')
-          .run(ch.quiz.id, ch.id, ch.quiz.title||'מבחן מסכם', qs);
-      }
-      for (let li = 0; li < (ch.lessons||[]).length; li++) {
-        const ls = ch.lessons[li];
-        db.prepare('INSERT OR IGNORE INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
-          .run(ls.id, ch.id, ls.title, ls.description||'', ls.video_url||'',
-               JSON.stringify(ls.tags||[]), JSON.stringify(ls.exercises||[]),
-               JSON.stringify(ls.homework||ls.hw||[]), ls.sort_order??li);
-      }
-    }
-  }
-}
+// Seeds only when the DB is completely empty (first run / manual reset).
+// After that, SQLite is the single source of truth — admin edits live there.
 
 function seedHardcoded() {
-  const curriculum = [
+  const TEMPLATE = [
     {
       id: 'חטיבה-תיכון', name: 'חטיבה → תיכון', emoji: '📐', color: 'ct-blue',
       meta: '32 שיעורים · הכנה מלאה', sort_order: 0,
       chapters: [
         { id: 'ch1', title: 'מספרים ושברים', sort_order: 0,
           quiz: { id: 'qz1', title: 'מבחן: מספרים ושברים', questions: [
-            { q: 'כמה הוא (-3) + 7?', options: ['4','10','-10','-4'], answer: 0 }
+            { q: 'כמה הוא (-3) + 7?', options: ['4','10','-10','-4'], answer: 0 },
+            { q: 'מה הוא הערך המוחלט של -5?', options: ['5','-5','0','25'], answer: 0 },
+            { q: 'כמה הוא ²⁄₃ + ¹⁄₄?', options: ['¹¹⁄₁₂','³⁄₇','⅚','¾'], answer: 0 },
           ]},
           lessons: [
-            { id: 'c1l1', title: 'מספרים טבעיים ושלמים', description: '', tags: [], exercises: [], homework: [] },
-            { id: 'c1l2', title: 'שברים רגילים וחישובים', description: '', tags: [], exercises: [], homework: [] },
+            { id: 'c1l1', title: 'מספרים טבעיים ושלמים', description: 'נלמד על מספרים שלמים, ערך מוחלט וסדר פעולות חשבון.', tags: ['תיאוריה'], exercises: [], homework: [] },
+            { id: 'c1l2', title: 'שברים רגילים וחישובים', description: 'חיבור, חיסור, כפל וחילוק של שברים. פישוט שברים.', tags: ['תיאוריה','תרגול'], exercises: [], homework: [] },
+            { id: 'c1l3', title: 'עשרוניים ואחוזים', description: 'המרה בין עשרוניים לאחוזים ופתרון שאלות אחוזים.', tags: ['תרגול'], exercises: [], homework: [] },
           ]
         },
         { id: 'ch2', title: 'אלגברה — ביטויים ומשוואות', sort_order: 1,
           quiz: { id: 'qz2', title: 'מבחן: אלגברה', questions: [
-            { q: 'פשט: 3x + 2x - x', options: ['4x','6x','5x','x'], answer: 0 }
+            { q: 'פשט: 3x + 2x - x', options: ['4x','6x','5x','x'], answer: 0 },
+            { q: 'פתור: 2x + 5 = 13', options: ['x=4','x=9','x=3','x=5'], answer: 0 },
           ]},
           lessons: [
-            { id: 'c2l1', title: 'ביטויים אלגבריים', description: '', tags: [], exercises: [], homework: [] },
-            { id: 'c2l2', title: 'משוואה ממעלה ראשונה', description: '', tags: [], exercises: [], homework: [] },
+            { id: 'c2l1', title: 'ביטויים אלגבריים', description: 'פישוט ביטויים, הוצאת גורם משותף וכפל סוגריים.', tags: ['תיאוריה'], exercises: [], homework: [] },
+            { id: 'c2l2', title: 'משוואה ממעלה ראשונה', description: 'פתרון משוואות לינאריות ושאלות מילוליות.', tags: ['תרגול'], exercises: [], homework: [] },
+            { id: 'c2l3', title: 'משוואה ממעלה שנייה', description: 'פתרון ריבועית: פירוק לגורמים ונוסחת שורשים.', tags: ['תיאוריה','תרגול'], exercises: [], homework: [] },
+            { id: 'c2l4', title: 'אי-שוויונות', description: 'פתרון אי-שוויונות ויצוג על ציר המספרים.', tags: ['תרגול'], exercises: [], homework: [] },
+          ]
+        },
+        { id: 'ch3', title: 'גאומטריה', sort_order: 2,
+          quiz: { id: 'qz3', title: 'מבחן: גאומטריה', questions: [
+            { q: 'מהי הזווית הנשלמת ל-65°?', options: ['115°','25°','90°','180°'], answer: 0 },
+          ]},
+          lessons: [
+            { id: 'c3l1', title: 'זוויות ומשפטים בסיסיים', description: 'זוויות משלימות, זוויות במשולש ומשפטים על קווים מקבילים.', tags: ['תיאוריה'], exercises: [], homework: [] },
+            { id: 'c3l2', title: 'משפט פיתגורס', description: 'הכרת המשפט, שימוש ובדיקה.', tags: ['תרגול'], exercises: [], homework: [] },
+            { id: 'c3l3', title: 'שטחים ונפחים', description: 'חישוב שטח ונפח של צורות מישוריות ותלת-מימדיות.', tags: ['תיאוריה','תרגול'], exercises: [], homework: [] },
+          ]
+        },
+        { id: 'ch4', title: 'פונקציות לינאריות', sort_order: 3,
+          quiz: { id: 'qz4', title: 'מבחן: פונקציות', questions: [
+            { q: 'שיפוע: (1,2) ו-(3,8)?', options: ['3','2','4','6'], answer: 0 },
+          ]},
+          lessons: [
+            { id: 'c4l1', title: 'מושגי יסוד בפונקציה', description: 'תחום, טווח, נקודת חיתוך עם הצירים.', tags: ['תיאוריה'], exercises: [], homework: [] },
+            { id: 'c4l2', title: 'שיפוע וקו ישר', description: 'חישוב שיפוע ומשוואת קו ישר.', tags: ['תרגול'], exercises: [], homework: [] },
+          ]
+        },
+        { id: 'ch5', title: 'סטטיסטיקה', sort_order: 4,
+          quiz: { id: 'qz5', title: 'מבחן: סטטיסטיקה', questions: [
+            { q: 'ממוצע של: 3, 7, 5, 9, 1?', options: ['5','4','6','7'], answer: 0 },
+          ]},
+          lessons: [
+            { id: 'c5l1', title: 'ממוצע, חציון, שכיח', description: 'חישוב מדדי מיקום מרכזיים.', tags: ['תיאוריה'], exercises: [], homework: [] },
+            { id: 'c5l2', title: 'הסתברות בסיסית', description: 'חישוב הסתברות של אירועים פשוטים ומורכבים.', tags: ['תרגול'], exercises: [], homework: [] },
           ]
         },
       ]
@@ -280,9 +173,21 @@ function seedHardcoded() {
       meta: '48 שיעורים · 3 רמות', sort_order: 1,
       chapters: [
         { id: 'bg1', title: 'חזרה על בסיס', sort_order: 0,
-          quiz: { id: 'qz6', title: 'מבחן: חזרה', questions: [] },
+          quiz: { id: 'qz6', title: 'מבחן: חזרה על בסיס', questions: [
+            { q: 'פשט: (2x²)³', options: ['8x⁶','6x⁶','8x⁵','2x⁶'], answer: 0 },
+          ]},
           lessons: [
-            { id: 'b1l1', title: 'אלגברה — חזרה מהירה', description: '', tags: [], exercises: [], homework: [] },
+            { id: 'b1l1', title: 'אלגברה — חזרה מהירה', description: 'חזרה על נושאי אלגברה מהחטיבה.', tags: ['חזרה'], exercises: [], homework: [] },
+            { id: 'b1l2', title: 'פונקציות — חזרה', description: 'גרפים, נקודות קיצון ואסימפטוטות.', tags: ['חזרה','גרף'], exercises: [], homework: [] },
+          ]
+        },
+        { id: 'bg2', title: 'מבנה שאלון הבגרות', sort_order: 1,
+          quiz: { id: 'qz7', title: 'מבחן: אסטרטגיה', questions: [
+            { q: 'כמה זמן יש לשאלון בגרות מלאה?', options: ['3 שעות','2 שעות','4 שעות','שעתיים וחצי'], answer: 0 },
+          ]},
+          lessons: [
+            { id: 'b2l1', title: 'הכרת השאלון ואסטרטגיה', description: 'מבנה שאלון 806, ניהול זמן ואסטרטגיית פתרון.', tags: ['אסטרטגיה'], exercises: [], homework: [] },
+            { id: 'b2l2', title: 'שאלות מילוליות — שיטה', description: 'שיטת 4 שלבים לפתרון שאלות מילוליות.', tags: ['שיטה'], exercises: [], homework: [] },
           ]
         },
       ]
@@ -292,15 +197,19 @@ function seedHardcoded() {
       meta: '28 שיעורים · רמה גבוהה', sort_order: 2,
       chapters: [
         { id: 'mr1', title: 'חשבון דיפרנציאלי', sort_order: 0,
-          quiz: { id: 'qz8', title: 'מבחן: נגזרות', questions: [] },
+          quiz: { id: 'qz8', title: 'מבחן: נגזרות', questions: [
+            { q: "f'(x) של x³:", options: ['3x²','x²','3x','x³'], answer: 0 },
+          ]},
           lessons: [
-            { id: 'm1l1', title: 'גבולות ורציפות', description: '', tags: [], exercises: [], homework: [] },
+            { id: 'm1l1', title: 'גבולות ורציפות', description: 'חישוב גבולות ובדיקת רציפות.', tags: ['תיאוריה'], exercises: [], homework: [] },
+            { id: 'm1l2', title: 'נגזרות — כללים', description: 'כללי גזירה: חיבור, מכפלה, מנה, שרשרת.', tags: ['תרגול'], exercises: [], homework: [] },
           ]
         }
       ]
     }
   ];
-  for (const course of curriculum) {
+
+  for (const course of TEMPLATE) {
     db.prepare('INSERT OR IGNORE INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)')
       .run(course.id, course.name, course.emoji, course.color, course.meta, course.sort_order);
     for (const ch of course.chapters) {
@@ -312,15 +221,21 @@ function seedHardcoded() {
       }
       ch.lessons.forEach((ls, li) => {
         db.prepare('INSERT OR IGNORE INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
-          .run(ls.id, ch.id, ls.title, ls.description, '', JSON.stringify(ls.tags), JSON.stringify(ls.exercises), JSON.stringify(ls.homework), li);
+          .run(ls.id, ch.id, ls.title, ls.description, '',
+               JSON.stringify(ls.tags), JSON.stringify(ls.exercises), JSON.stringify(ls.homework), li);
       });
     }
   }
-  console.log('[Seed] Hardcoded curriculum seeded');
+  console.log('[Seed] Fresh curriculum seeded — all video_url empty, ready for admin');
 }
 
-// Run seed (async — awaited before first use via _seedPromise)
-const _seedPromise = seedCurriculum();
+function seedCurriculum() {
+  const count = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
+  if (count > 0) { console.log('[Seed] DB has data — skipping'); return; }
+  seedHardcoded();
+}
+
+const _seedPromise = Promise.resolve(seedCurriculum());
 
 // ─── CURRICULUM READ ───────────────────────────────────────────────────
 function getCurriculum() {
@@ -444,18 +359,12 @@ app.post('/api/progress', (req, res) => {
 
 // ─── CURRICULUM READ ───────────────────────────────────────────────────
 app.get('/api/curriculum', async (req, res) => {
-  // Always try GitHub first (fresh, consistent across all Vercel instances)
-  const cached = await getGitHubCurriculum();
-  if (cached?.data) return res.json(cached.data);
-  // Fallback: local DB (seeded on cold start)
   await _seedPromise;
-  res.json(getCurriculum());
+  res.json(normalisedCurriculum());
 });
 
-app.get('/api/curriculum-version', async (req, res) => {
-  // Use GitHub file SHA as version — identical across all Vercel instances
-  const cached = await getGitHubCurriculum();
-  res.json({ version: cached?.sha || curriculumVersion });
+app.get('/api/curriculum-version', (req, res) => {
+  res.json({ version: curriculumVersion });
 });
 
 // ─── QUIZ RESULT ───────────────────────────────────────────────────────
@@ -509,7 +418,7 @@ app.post('/api/admin/courses', async (req, res) => {
   if (!id || !name) return res.status(400).json({ error: 'id and name required' });
   const n = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
   db.prepare('INSERT INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)').run(id,name,emoji,color,meta,n);
-  await saveDraft(); res.json({ ok: true });
+  curriculumVersion = Date.now(); res.json({ ok: true });
 });
 
 app.put('/api/admin/courses/:id', async (req, res) => {
@@ -517,7 +426,7 @@ app.put('/api/admin/courses/:id', async (req, res) => {
   const { name, emoji, color, meta, sort_order } = req.body;
   db.prepare('UPDATE courses SET name=COALESCE(?,name), emoji=COALESCE(?,emoji), color=COALESCE(?,color), meta=COALESCE(?,meta), sort_order=COALESCE(?,sort_order) WHERE id=?')
     .run(name||null, emoji||null, color||null, meta||null, sort_order??null, req.params.id);
-  await saveDraft(); res.json({ ok: true });
+  curriculumVersion = Date.now(); res.json({ ok: true });
 });
 
 app.delete('/api/admin/courses/:id', async (req, res) => {
@@ -530,7 +439,7 @@ app.delete('/api/admin/courses/:id', async (req, res) => {
   }
   db.prepare('DELETE FROM chapters WHERE course_id=?').run(cid);
   db.prepare('DELETE FROM courses WHERE id=?').run(cid);
-  await saveDraft(); res.json({ ok: true });
+  curriculumVersion = Date.now(); res.json({ ok: true });
 });
 
 // Chapters
@@ -540,14 +449,14 @@ app.post('/api/admin/chapters', async (req, res) => {
   if (!id || !course_id || !title) return res.status(400).json({ error: 'missing fields' });
   const n = db.prepare('SELECT COUNT(*) as n FROM chapters WHERE course_id=?').get(course_id).n;
   db.prepare('INSERT INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)').run(id,course_id,title,n);
-  await saveDraft(); res.json({ ok: true });
+  curriculumVersion = Date.now(); res.json({ ok: true });
 });
 
 app.put('/api/admin/chapters/:id', async (req, res) => {
   await _seedPromise;
   const { title, sort_order } = req.body;
   db.prepare('UPDATE chapters SET title=COALESCE(?,title), sort_order=COALESCE(?,sort_order) WHERE id=?').run(title||null, sort_order??null, req.params.id);
-  await saveDraft(); res.json({ ok: true });
+  curriculumVersion = Date.now(); res.json({ ok: true });
 });
 
 app.delete('/api/admin/chapters/:id', async (req, res) => {
@@ -556,7 +465,7 @@ app.delete('/api/admin/chapters/:id', async (req, res) => {
   db.prepare('DELETE FROM lessons WHERE chapter_id=?').run(cid);
   db.prepare('DELETE FROM quizzes WHERE chapter_id=?').run(cid);
   db.prepare('DELETE FROM chapters WHERE id=?').run(cid);
-  await saveDraft(); res.json({ ok: true });
+  curriculumVersion = Date.now(); res.json({ ok: true });
 });
 
 // Lessons
@@ -567,7 +476,7 @@ app.post('/api/admin/lessons', async (req, res) => {
   const n = db.prepare('SELECT COUNT(*) as n FROM lessons WHERE chapter_id=?').get(chapter_id).n;
   db.prepare('INSERT INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
     .run(id,chapter_id,title,description,video_url,JSON.stringify(tags),JSON.stringify(exercises),JSON.stringify(homework),n);
-  await saveDraft(); res.json({ ok: true });
+  curriculumVersion = Date.now(); res.json({ ok: true });
 });
 
 app.put('/api/admin/lessons/:id', async (req, res) => {
@@ -585,13 +494,13 @@ app.put('/api/admin/lessons/:id', async (req, res) => {
       homework?JSON.stringify(homework):null,
       sort_order??null, req.params.id
     );
-  await saveDraft(); res.json({ ok: true });
+  curriculumVersion = Date.now(); res.json({ ok: true });
 });
 
 app.delete('/api/admin/lessons/:id', async (req, res) => {
   await _seedPromise;
   db.prepare('DELETE FROM lessons WHERE id=?').run(req.params.id);
-  await saveDraft(); res.json({ ok: true });
+  curriculumVersion = Date.now(); res.json({ ok: true });
 });
 
 // Quizzes
@@ -606,25 +515,15 @@ app.put('/api/admin/quizzes/:chapter_id', async (req, res) => {
     const id = 'qz_' + Date.now();
     db.prepare('INSERT INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)').run(id, req.params.chapter_id, title||'מבחן מסכם', JSON.stringify(questions||[]));
   }
-  await saveDraft(); res.json({ ok: true });
+  curriculumVersion = Date.now(); res.json({ ok: true });
 });
 
-// Publish — writes current DB state to both draft.json and published.json
+// Publish — bumps version so all connected clients re-fetch curriculum
 app.post('/api/admin/push', async (req, res) => {
   await _seedPromise;
-  const data = normalisedCurriculum();
-  console.log(`[push] courses in DB: ${data.length}, DATA_REPO: ${DATA_REPO}`);
-  // Write locally (dev) — update BOTH files so the folder reflects current state
-  if (!process.env.VERCEL) {
-    writeLocalDataFile('draft.json',     data);
-    writeLocalDataFile('published.json', data);
-  }
-  // Write to GitHub (prod)
-  await writeGitHubFile('draft.json',     data, 'publish: admin pushed');
-  await writeGitHubFile('published.json', data, 'publish: admin pushed');
-  _ghCache = { data: null, sha: null, ts: 0 };
   curriculumVersion = Date.now();
-  res.json({ ok: true, version: curriculumVersion, courses: data.length, repo: DATA_REPO || 'NOT SET' });
+  const data = normalisedCurriculum();
+  res.json({ ok: true, version: curriculumVersion, courses: data.length });
 });
 
 app.get('/api/admin/export-curriculum', async (req, res) => {
