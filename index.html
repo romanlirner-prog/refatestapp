@@ -2211,18 +2211,28 @@ function toggleFullscreen(el) {
     || document.querySelector('#panel-video .video-wrap')
     || document.querySelector('.video-wrap');
   if (!wrap) return;
+
+  // Close if already open
   if (document.getElementById('fs-overlay')) { closeFsOverlay(); return; }
   if (document.fullscreenElement || document.webkitFullscreenElement) {
     (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
     return;
   }
+
+  // Telegram WebView blocks requestFullscreen — go straight to overlay
+  const inTelegram = !!(window.Telegram?.WebApp?.initData || window.TelegramWebviewProxy);
+  if (inTelegram) { openFsOverlay(wrap); return; }
+
+  // iOS Safari: native video fullscreen
   const video = wrap.querySelector('video');
   if (video?.webkitEnterFullscreen && !document.fullscreenEnabled) {
     video.webkitEnterFullscreen();
     return;
   }
+
+  // Desktop browser: try native, fall back to overlay
   const fsReq = wrap.requestFullscreen || wrap.webkitRequestFullscreen;
-  if (fsReq && document.fullscreenEnabled) {
+  if (fsReq) {
     fsReq.call(wrap).catch(() => openFsOverlay(wrap));
     return;
   }
