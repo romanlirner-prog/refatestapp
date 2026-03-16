@@ -624,7 +624,7 @@ app.post('/api/admin/push', async (req, res) => {
   await writeGitHubFile('published.json', data, 'publish: admin pushed');
   _ghCache = { data: null, sha: null, ts: 0 };
   curriculumVersion = Date.now();
-  res.json({ ok: true, version: curriculumVersion, courses: courses.length, repo: DATA_REPO || 'NOT SET' });
+  res.json({ ok: true, version: curriculumVersion, courses: data.length, repo: DATA_REPO || 'NOT SET' });
 });
 
 app.get('/api/admin/export-curriculum', async (req, res) => {
