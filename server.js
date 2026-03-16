@@ -135,10 +135,7 @@ async function saveToGitHub() {
 
 // ─── SEED ──────────────────────────────────────────────────────────────
 async function seedCurriculum() {
-  const count = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
-  if (count > 0) return; // DB already has data
-
-  // Try GitHub first (always the latest admin-saved version)
+  // תמיד ננסה לסנכרן מ-GitHub קודם
   if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO) {
     try {
       const token = process.env.GITHUB_TOKEN;
@@ -151,8 +148,10 @@ async function seedCurriculum() {
         if (json.content) {
           const data = JSON.parse(Buffer.from(json.content, 'base64').toString('utf8'));
           if (Array.isArray(data) && data.length > 0) {
+            // מחיקה ו-reseed — תמיד מ-GitHub
+            db.exec('DELETE FROM quizzes; DELETE FROM lessons; DELETE FROM chapters; DELETE FROM courses;');
             seedFromJson(data);
-            console.log('[Seed] Loaded from GitHub ✓');
+            console.log('[Seed] Synced from GitHub ✓');
             return;
           }
         }
@@ -160,7 +159,9 @@ async function seedCurriculum() {
     } catch (e) { console.error('[Seed] GitHub failed:', e.message); }
   }
 
-  // Fallback: bundled curriculum.json
+  // fallback: רק אם DB ריק
+  const count = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
+  if (count > 0) return;
   const filePaths = [CURRICULUM_JSON, path.join(process.cwd(), 'curriculum.json')];
   for (const p of filePaths) {
     try {
@@ -174,8 +175,6 @@ async function seedCurriculum() {
       }
     } catch {}
   }
-
-  // Last resort: hardcoded
   seedHardcoded();
 }
 
