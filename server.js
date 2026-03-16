@@ -531,11 +531,35 @@ app.put('/api/admin/quizzes/:chapter_id', async (req, res) => {
 });
 
 // Publish — bumps version so all connected clients re-fetch curriculum
+async function syncToGitHub() {
+  const token = process.env.GITHUB_TOKEN;
+  const repo  = process.env.GITHUB_REPO;
+  if (!token || !repo) return;
+  const content = Buffer.from(JSON.stringify(normalisedCurriculum(), null, 2)).toString('base64');
+  const getRes  = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum.json`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
+  });
+  const sha = getRes.ok ? (await getRes.json()).sha : undefined;
+  const putRes = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum.json`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: 'admin: publish curriculum', content, ...(sha ? { sha } : {}) })
+  });
+  if (!putRes.ok) throw new Error(`GitHub PUT ${putRes.status}`);
+}
+
 app.post('/api/admin/push', async (req, res) => {
   await _seedPromise;
   curriculumVersion = Date.now();
   const data = normalisedCurriculum();
-  res.json({ ok: true, version: curriculumVersion, courses: data.length });
+  try {
+    await syncToGitHub();
+    console.log('[Publish] Synced curriculum → GitHub ✓');
+    res.json({ ok: true, version: curriculumVersion, courses: data.length, synced: true });
+  } catch (e) {
+    console.error('[Publish] GitHub sync failed:', e.message);
+    res.json({ ok: true, version: curriculumVersion, courses: data.length, synced: false, syncError: e.message });
+  }
 });
 
 app.get('/api/admin/export-curriculum', async (req, res) => {
