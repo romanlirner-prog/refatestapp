@@ -680,11 +680,17 @@ video:fullscreen, video:-webkit-full-screen {
   background: #000; display: flex; align-items: center; justify-content: center;
 }
 #fs-overlay .video-wrap {
-  width: 100vw; height: 100vh; max-width: none; border-radius: 0;
-  display: flex; align-items: center; justify-content: center; background: #000;
+  width: 100vw; height: 100vh; max-width: none;
+  border-radius: 0; margin: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #000;
 }
 #fs-overlay .video-wrap video {
-  width: 100% !important; height: 100% !important; object-fit: contain;
+  width: 100% !important; height: 100% !important;
+  object-fit: contain;
+}
+#fs-overlay .video-fullscreen-btn {
+  background: rgba(255,255,255,0.2);
 }
 
 /* Toast */
@@ -2174,27 +2180,28 @@ function openFsOverlay(wrap) {
   overlay._cleanup = () => document.removeEventListener('keydown', onKey);
 }
 
-function toggleFullscreen(btn) {
-  const wrap = btn?.closest?.('.video-wrap')
+function toggleFullscreen(el) {
+  const wrap = el?.classList?.contains('video-wrap')
+    ? el
+    : el?.closest?.('.video-wrap')
     || document.querySelector('#panel-video .video-wrap')
     || document.querySelector('.video-wrap');
   if (!wrap) return;
-
-  // Exit if already in overlay or native fullscreen
   if (document.getElementById('fs-overlay')) { closeFsOverlay(); return; }
   if (document.fullscreenElement || document.webkitFullscreenElement) {
     (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
     return;
   }
-
-  // iOS Safari: native video fullscreen
   const video = wrap.querySelector('video');
   if (video?.webkitEnterFullscreen && !document.fullscreenEnabled) {
     video.webkitEnterFullscreen();
     return;
   }
-
-  // Everything else (desktop, Telegram WebView, etc.) → overlay
+  const fsReq = wrap.requestFullscreen || wrap.webkitRequestFullscreen;
+  if (fsReq && document.fullscreenEnabled) {
+    fsReq.call(wrap).catch(() => openFsOverlay(wrap));
+    return;
+  }
   openFsOverlay(wrap);
 }
 
