@@ -232,26 +232,8 @@ async function seedCurriculum() {
 
 const _seedPromise = seedCurriculum();
 
-// ─── ONE-TIME MIGRATIONS ────────────────────────────────────────────────
-// Each migration runs exactly once, tracked by key in _migrations table.
-try {
-  db.exec("CREATE TABLE IF NOT EXISTS _migrations (key TEXT PRIMARY KEY)");
-  if (!db.prepare("SELECT key FROM _migrations WHERE key='clear_quiz_questions_v1'").get()) {
-    db.prepare("UPDATE quizzes SET questions='[]'").run();
-    db.prepare("INSERT INTO _migrations (key) VALUES (?)").run('clear_quiz_questions_v1');
-    console.log('[Migration] Cleared all dummy quiz questions');
-  }
-  if (!db.prepare("SELECT key FROM _migrations WHERE key='delete_seeded_lessons_v1'").get()) {
-    const deleted = db.prepare('DELETE FROM lessons').run();
-    db.prepare("INSERT INTO _migrations (key) VALUES (?)").run('delete_seeded_lessons_v1');
-    console.log(`[Migration] Deleted ${deleted.changes} seeded lessons — chapters remain`);
-  }
-  if (!db.prepare("SELECT key FROM _migrations WHERE key='delete_all_lessons_v3'").get()) {
-    const deleted = db.prepare('DELETE FROM lessons').run();
-    db.prepare("INSERT INTO _migrations (key) VALUES (?)").run('delete_all_lessons_v3');
-    console.log(`[Migration] v3 — wiped ${deleted.changes} lessons from DB`);
-  }
-} catch(e) { console.error('[Migration error]', e.message); }
+// (migrations removed — on Vercel /tmp is always fresh, so one-time
+//  migrations would re-run every cold start and destroy data)
 
 // ─── CURRICULUM READ ───────────────────────────────────────────────────
 function getCurriculum() {
@@ -434,7 +416,7 @@ app.post('/api/admin/courses', async (req, res) => {
   if (!id || !name) return res.status(400).json({ error: 'id and name required' });
   const n = db.prepare('SELECT COUNT(*) as n FROM courses').get().n;
   db.prepare('INSERT INTO courses (id,name,emoji,color,meta,sort_order) VALUES (?,?,?,?,?,?)').run(id,name,emoji,color,meta,n);
-  curriculumVersion = Date.now(); res.json({ ok: true });
+  curriculumVersion = Date.now(); bgSync(); res.json({ ok: true });
 });
 
 app.put('/api/admin/courses/:id', async (req, res) => {
@@ -442,7 +424,7 @@ app.put('/api/admin/courses/:id', async (req, res) => {
   const { name, emoji, color, meta, sort_order } = req.body;
   db.prepare('UPDATE courses SET name=COALESCE(?,name), emoji=COALESCE(?,emoji), color=COALESCE(?,color), meta=COALESCE(?,meta), sort_order=COALESCE(?,sort_order) WHERE id=?')
     .run(name||null, emoji||null, color||null, meta||null, sort_order??null, req.params.id);
-  curriculumVersion = Date.now(); res.json({ ok: true });
+  curriculumVersion = Date.now(); bgSync(); res.json({ ok: true });
 });
 
 app.delete('/api/admin/courses/:id', async (req, res) => {
@@ -455,7 +437,7 @@ app.delete('/api/admin/courses/:id', async (req, res) => {
   }
   db.prepare('DELETE FROM chapters WHERE course_id=?').run(cid);
   db.prepare('DELETE FROM courses WHERE id=?').run(cid);
-  curriculumVersion = Date.now(); res.json({ ok: true });
+  curriculumVersion = Date.now(); bgSync(); res.json({ ok: true });
 });
 
 // Chapters
@@ -465,14 +447,14 @@ app.post('/api/admin/chapters', async (req, res) => {
   if (!id || !course_id || !title) return res.status(400).json({ error: 'missing fields' });
   const n = db.prepare('SELECT COUNT(*) as n FROM chapters WHERE course_id=?').get(course_id).n;
   db.prepare('INSERT INTO chapters (id,course_id,title,sort_order) VALUES (?,?,?,?)').run(id,course_id,title,n);
-  curriculumVersion = Date.now(); res.json({ ok: true });
+  curriculumVersion = Date.now(); bgSync(); res.json({ ok: true });
 });
 
 app.put('/api/admin/chapters/:id', async (req, res) => {
   await _seedPromise;
   const { title, sort_order } = req.body;
   db.prepare('UPDATE chapters SET title=COALESCE(?,title), sort_order=COALESCE(?,sort_order) WHERE id=?').run(title||null, sort_order??null, req.params.id);
-  curriculumVersion = Date.now(); res.json({ ok: true });
+  curriculumVersion = Date.now(); bgSync(); res.json({ ok: true });
 });
 
 app.delete('/api/admin/chapters/:id', async (req, res) => {
@@ -481,7 +463,7 @@ app.delete('/api/admin/chapters/:id', async (req, res) => {
   db.prepare('DELETE FROM lessons WHERE chapter_id=?').run(cid);
   db.prepare('DELETE FROM quizzes WHERE chapter_id=?').run(cid);
   db.prepare('DELETE FROM chapters WHERE id=?').run(cid);
-  curriculumVersion = Date.now(); res.json({ ok: true });
+  curriculumVersion = Date.now(); bgSync(); res.json({ ok: true });
 });
 
 // Lessons
@@ -492,7 +474,7 @@ app.post('/api/admin/lessons', async (req, res) => {
   const n = db.prepare('SELECT COUNT(*) as n FROM lessons WHERE chapter_id=?').get(chapter_id).n;
   db.prepare('INSERT INTO lessons (id,chapter_id,title,description,video_url,tags,exercises,homework,sort_order) VALUES (?,?,?,?,?,?,?,?,?)')
     .run(id,chapter_id,title,description,video_url,JSON.stringify(tags),JSON.stringify(exercises),JSON.stringify(homework),n);
-  curriculumVersion = Date.now(); res.json({ ok: true });
+  curriculumVersion = Date.now(); bgSync(); res.json({ ok: true });
 });
 
 app.put('/api/admin/lessons/:id', async (req, res) => {
@@ -510,13 +492,13 @@ app.put('/api/admin/lessons/:id', async (req, res) => {
       homework?JSON.stringify(homework):null,
       sort_order??null, req.params.id
     );
-  curriculumVersion = Date.now(); res.json({ ok: true });
+  curriculumVersion = Date.now(); bgSync(); res.json({ ok: true });
 });
 
 app.delete('/api/admin/lessons/:id', async (req, res) => {
   await _seedPromise;
   db.prepare('DELETE FROM lessons WHERE id=?').run(req.params.id);
-  curriculumVersion = Date.now(); res.json({ ok: true });
+  curriculumVersion = Date.now(); bgSync(); res.json({ ok: true });
 });
 
 // Quizzes
@@ -531,10 +513,12 @@ app.put('/api/admin/quizzes/:chapter_id', async (req, res) => {
     const id = 'qz_' + Date.now();
     db.prepare('INSERT INTO quizzes (id,chapter_id,title,questions) VALUES (?,?,?,?)').run(id, req.params.chapter_id, title||'מבחן מסכם', JSON.stringify(questions||[]));
   }
-  curriculumVersion = Date.now(); res.json({ ok: true });
+  curriculumVersion = Date.now(); bgSync(); res.json({ ok: true });
 });
 
-// Publish — bumps version so all connected clients re-fetch curriculum
+// ─── GITHUB SYNC ──────────────────────────────────────────────────────
+// Every admin write syncs the full curriculum to GitHub so data survives
+// Vercel cold starts (which wipe /tmp/miniapp.db every time).
 async function syncToGitHub() {
   const token = process.env.GITHUB_TOKEN;
   const repo  = process.env.GITHUB_REPO;
@@ -550,6 +534,11 @@ async function syncToGitHub() {
     body: JSON.stringify({ message: 'admin: publish curriculum', content, ...(sha ? { sha } : {}) })
   });
   if (!putRes.ok) throw new Error(`GitHub PUT ${putRes.status}`);
+}
+
+// Fire-and-forget sync after every admin write
+function bgSync() {
+  syncToGitHub().catch(e => console.error('[bgSync]', e.message));
 }
 
 app.post('/api/admin/push', async (req, res) => {
