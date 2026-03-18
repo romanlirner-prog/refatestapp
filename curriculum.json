@@ -1,0 +1,136 @@
+[
+  {
+    "id": "חטיבה-תיכון",
+    "name": "חטיבה → תיכון",
+    "emoji": "📐",
+    "color": "ct-blue",
+    "meta": "",
+    "sort_order": 0,
+    "chapters": [
+      {
+        "id": "ch1",
+        "course_id": "חטיבה-תיכון",
+        "title": "מספרים ושברים",
+        "sort_order": 0,
+        "quiz": {
+          "id": "qz1",
+          "chapter_id": "ch1",
+          "title": "מבחן: מספרים ושברים",
+          "questions": []
+        },
+        "lessons": []
+      },
+      {
+        "id": "ch2",
+        "course_id": "חטיבה-תיכון",
+        "title": "אלגברה — ביטויים ומשוואות",
+        "sort_order": 1,
+        "quiz": {
+          "id": "qz2",
+          "chapter_id": "ch2",
+          "title": "מבחן: אלגברה",
+          "questions": []
+        },
+        "lessons": []
+      },
+      {
+        "id": "ch3",
+        "course_id": "חטיבה-תיכון",
+        "title": "גאומטריה",
+        "sort_order": 2,
+        "quiz": {
+          "id": "qz3",
+          "chapter_id": "ch3",
+          "title": "מבחן: גאומטריה",
+          "questions": []
+        },
+        "lessons": []
+      },
+      {
+        "id": "ch4",
+        "course_id": "חטיבה-תיכון",
+        "title": "פונקציות לינאריות",
+        "sort_order": 3,
+        "quiz": {
+          "id": "qz4",
+          "chapter_id": "ch4",
+          "title": "מבחן: פונקציות",
+          "questions": []
+        },
+        "lessons": []
+      },
+      {
+        "id": "ch5",
+        "course_id": "חטיבה-תיכון",
+        "title": "סטטיסטיקה",
+        "sort_order": 4,
+        "quiz": {
+          "id": "qz5",
+          "chapter_id": "ch5",
+          "title": "מבחן: סטטיסטיקה",
+          "questions": []
+        },
+        "lessons": []
+      }
+    ]
+  },
+  {
+    "id": "הכנה לבגרות",
+    "name": "הכנה לבגרות",
+    "emoji": "📝",
+    "color": "ct-green",
+    "meta": "",
+    "sort_order": 1,
+    "chapters": [
+      {
+        "id": "bg1",
+        "course_id": "הכנה לבגרות",
+        "title": "חזרה על בסיס",
+        "sort_order": 0,
+        "quiz": {
+          "id": "qz6",
+          "chapter_id": "bg1",
+          "title": "מבחן: חזרה על בסיס",
+          "questions": []
+        },
+        "lessons": []
+      },
+      {
+        "id": "bg2",
+        "course_id": "הכנה לבגרות",
+        "title": "מבנה שאלון הבגרות",
+        "sort_order": 1,
+        "quiz": {
+          "id": "qz7",
+          "chapter_id": "bg2",
+          "title": "מבחן: אסטרטגיה",
+          "questions": []
+        },
+        "lessons": []
+      }
+    ]
+  },
+  {
+    "id": "בגרות מורחבת",
+    "name": "בגרות מורחבת (5 יח')",
+    "emoji": "🏆",
+    "color": "ct-amber",
+    "meta": "",
+    "sort_order": 2,
+    "chapters": [
+      {
+        "id": "mr1",
+        "course_id": "בגרות מורחבת",
+        "title": "חשבון דיפרנציאלי",
+        "sort_order": 0,
+        "quiz": {
+          "id": "qz8",
+          "chapter_id": "mr1",
+          "title": "מבחן: נגזרות",
+          "questions": []
+        },
+        "lessons": []
+      }
+    ]
+  }
+]
