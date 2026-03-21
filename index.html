@@ -1110,50 +1110,12 @@ async function doAuth() {
   }
 }
 
-const ADMIN_PHONE_TRIGGER = '0535266628';
-let isAdminMode = false;
-
 document.getElementById('auth-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    if (isAdminMode) document.getElementById('auth-admin-pass').focus();
-    else handleAuthSubmit();
-  }
-});
-document.getElementById('auth-admin-pass').addEventListener('keydown', e => {
   if (e.key === 'Enter') handleAuthSubmit();
 });
 
-document.getElementById('auth-input').addEventListener('input', e => {
-  const val = e.target.value.replace(/[\s\-]/g, '');
-  const wrap = document.getElementById('admin-pass-wrap');
-  if (val === ADMIN_PHONE_TRIGGER) {
-    isAdminMode = true;
-    wrap.classList.add('visible');
-    document.getElementById('auth-btn').textContent = 'כניסת מנהל 🔐';
-    document.getElementById('auth-sub-text').innerHTML = 'זוהה מספר מנהל —<br>הזן את הסיסמה להמשך';
-    setTimeout(() => document.getElementById('auth-admin-pass').focus(), 320);
-  } else {
-    isAdminMode = false;
-    wrap.classList.remove('visible');
-    document.getElementById('auth-admin-pass').value = '';
-    document.getElementById('auth-btn').textContent = 'כניסה ←';
-    document.getElementById('auth-sub-text').innerHTML = 'הזן את האימייל או הטלפון<br>שבהם נרשמת לקורס';
-  }
-});
-
 function handleAuthSubmit() {
-  if (isAdminMode) {
-    const pass = document.getElementById('auth-admin-pass').value;
-    if (!pass) { document.getElementById('auth-admin-pass').focus(); return; }
-    // pre-fill the hidden admin screen fields and login
-    document.getElementById('admin-phone').value = ADMIN_PHONE_TRIGGER;
-    document.getElementById('admin-pass').value  = pass;
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById('screen-admin').classList.add('active');
-    doAdminLogin();
-  } else {
-    doAuth();
-  }
+  doAuth();
 }
 
 // ══════════════════════════════════════
