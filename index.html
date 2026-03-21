@@ -738,10 +738,6 @@ video:fullscreen, video:-webkit-full-screen {
   <div class="auth-sub" id="auth-sub-text">הזן את האימייל או הטלפון<br>שבהם נרשמת לקורס</div>
   <div class="auth-error" id="auth-error">לא נמצא חשבון עם הפרטים האלה</div>
   <input class="auth-input" id="auth-input" type="text" placeholder="example@email.com / 05X-XXXXXXX" autocomplete="off">
-  <!-- Admin password — hidden until admin phone typed -->
-  <div id="admin-pass-wrap" style="width:100%;overflow:hidden;max-height:0;transition:max-height .3s ease,opacity .3s ease;opacity:0;pointer-events:none">
-    <input class="auth-input" id="auth-admin-pass" type="password" placeholder="סיסמת מנהל" autocomplete="off" style="margin-bottom:12px">
-  </div>
   <button class="btn" id="auth-btn" onclick="handleAuthSubmit()">כניסה ←</button>
   <div class="spinner" id="auth-spinner"></div>
 </div>
@@ -896,25 +892,8 @@ video:fullscreen, video:-webkit-full-screen {
       <span class="admin-badge" style="margin:0">ADMIN</span>
     </div>
 
-    <!-- Login panel -->
-    <div id="admin-login-panel">
-      <div class="admin-card-body" style="border-radius:0 0 var(--r) var(--r);border-top:none">
-        <div class="form-group">
-          <label class="form-label">מספר טלפון</label>
-          <input class="form-input auth-input" id="admin-phone" type="tel" placeholder="05X-XXXXXXX" dir="ltr">
-        </div>
-        <div class="form-group">
-          <label class="form-label">סיסמה</label>
-          <input class="form-input auth-input" id="admin-pass" type="password" placeholder="••••••••" dir="ltr">
-        </div>
-        <div class="auth-error" id="admin-error">פרטים שגויים</div>
-        <button class="btn" onclick="doAdminLogin()">כניסה</button>
-        <div class="spinner" id="admin-spinner"></div>
-      </div>
-    </div>
-
-    <!-- Dashboard -->
-    <div id="admin-dashboard" class="hidden">
+    <!-- Dashboard (no login required) -->
+    <div id="admin-dashboard">
       <!-- Tabs -->
       <div class="admin-tabs" style="margin-top:12px">
         <div class="admin-tab active" onclick="switchAdminTab('courses')">📚 קורסים</div>
@@ -1049,6 +1028,7 @@ function navTo(screen, param) {
   if (screen === 'lessons' && param) { currentCourseId = param; renderLessons(param); }
   if (screen === 'progress') renderProgressMap();
   if (screen === 'home' && currentUser) renderHome();
+  if (screen === 'admin') loadAdminData();
 }
 
 // ══════════════════════════════════════
@@ -1203,8 +1183,8 @@ function renderHome() {
   document.getElementById('plan-badge').textContent = `${planData.emoji} מסלול ${plan}`;
   if (plan !== 'מנטור') document.getElementById('upgrade-banner').classList.remove('hidden');
 
-  // Admin button — only for Telegram username romanlirner
-  const isAdmin = currentUser.username === 'romanlirner';
+  // Admin button — available to everyone
+  const isAdmin = true;
   let adminBtn = document.getElementById('admin-shortcut-btn');
   if (isAdmin && !adminBtn) {
     adminBtn = document.createElement('button');
