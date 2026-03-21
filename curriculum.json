@@ -18,19 +18,7 @@
           "title": "מבחן: מספרים ושברים",
           "questions": "[]"
         },
-        "lessons": [
-          {
-            "id": "test_lesson_1",
-            "chapter_id": "ch1",
-            "title": "שיעור בדיקה",
-            "description": "תיאור",
-            "video_url": "",
-            "tags": [],
-            "exercises": [],
-            "homework": [],
-            "sort_order": 0
-          }
-        ]
+        "lessons": []
       },
       {
         "id": "ch2",
