@@ -14,8 +14,9 @@ const app = express();
 app.use(express.json());
 
 const staticDir = process.env.VERCEL ? path.join(process.cwd()) : path.join(__dirname);
-app.use(express.static(staticDir));
 const APP_VERSION = `v-${Date.now()}`;
+
+// Serve index.html with no-cache headers (MUST come before express.static)
 app.get('/', (req, res) => {
   if (req.query.v !== APP_VERSION) {
     return res.redirect(302, `/?v=${APP_VERSION}`);
@@ -25,6 +26,9 @@ app.get('/', (req, res) => {
   res.setHeader('Expires', '0');
   res.sendFile(path.join(staticDir, 'index.html'));
 });
+
+// Static files (css, js, images) — after the root handler so index.html isn't served from here
+app.use(express.static(staticDir, { index: false }));
 
 // ─── DB ────────────────────────────────────────────────────────────────
 const DB_PATH        = process.env.VERCEL ? '/tmp/miniapp.db' : path.join(__dirname, 'miniapp.db');
