@@ -522,23 +522,34 @@ app.put('/api/admin/quizzes/:chapter_id', async (req, res) => {
 async function syncToGitHub() {
   const token = process.env.GITHUB_TOKEN;
   const repo  = process.env.GITHUB_REPO;
-  if (!token || !repo) return;
-  const content = Buffer.from(JSON.stringify(normalisedCurriculum(), null, 2)).toString('base64');
-  const getRes  = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum.json`, {
+  if (!token || !repo) {
+    console.warn('[Sync] GITHUB_TOKEN or GITHUB_REPO not set — data will NOT persist across deploys!');
+    throw new Error('GITHUB_TOKEN/GITHUB_REPO not configured');
+  }
+  const curriculum = normalisedCurriculum();
+  const content = Buffer.from(JSON.stringify(curriculum, null, 2)).toString('base64');
+  const totalLessons = curriculum.reduce((s, c) => s + c.chapters.reduce((s2, ch) => s2 + (ch.lessons?.length || 0), 0), 0);
+  console.log(`[Sync] Writing ${curriculum.length} courses, ${totalLessons} lessons to GitHub...`);
+
+  const getRes = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum.json`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server' }
   });
   const sha = getRes.ok ? (await getRes.json()).sha : undefined;
   const putRes = await fetch(`https://api.github.com/repos/${repo}/contents/curriculum.json`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'miniapp-server', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: 'admin: publish curriculum', content, ...(sha ? { sha } : {}) })
+    body: JSON.stringify({ message: `admin: publish curriculum (${totalLessons} lessons)`, content, ...(sha ? { sha } : {}) })
   });
-  if (!putRes.ok) throw new Error(`GitHub PUT ${putRes.status}`);
+  if (!putRes.ok) {
+    const body = await putRes.text().catch(() => '');
+    throw new Error(`GitHub PUT ${putRes.status}: ${body.slice(0, 200)}`);
+  }
+  console.log(`[Sync] ✓ Saved to GitHub (${totalLessons} lessons)`);
 }
 
 // Fire-and-forget sync after every admin write
 function bgSync() {
-  syncToGitHub().catch(e => console.error('[bgSync]', e.message));
+  syncToGitHub().catch(e => console.error('[bgSync] FAILED:', e.message));
 }
 
 app.post('/api/admin/push', async (req, res) => {
