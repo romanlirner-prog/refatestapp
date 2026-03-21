@@ -16,7 +16,7 @@
           "id": "qz1",
           "chapter_id": "ch1",
           "title": "מבחן: מספרים ושברים",
-          "questions": "[]"
+          "questions": []
         },
         "lessons": []
       },
@@ -29,7 +29,7 @@
           "id": "qz2",
           "chapter_id": "ch2",
           "title": "מבחן: אלגברה",
-          "questions": "[]"
+          "questions": []
         },
         "lessons": []
       },
@@ -42,7 +42,7 @@
           "id": "qz3",
           "chapter_id": "ch3",
           "title": "מבחן: גאומטריה",
-          "questions": "[]"
+          "questions": []
         },
         "lessons": []
       },
@@ -55,7 +55,7 @@
           "id": "qz4",
           "chapter_id": "ch4",
           "title": "מבחן: פונקציות",
-          "questions": "[]"
+          "questions": []
         },
         "lessons": []
       },
@@ -68,7 +68,7 @@
           "id": "qz5",
           "chapter_id": "ch5",
           "title": "מבחן: סטטיסטיקה",
-          "questions": "[]"
+          "questions": []
         },
         "lessons": []
       }
@@ -91,7 +91,7 @@
           "id": "qz6",
           "chapter_id": "bg1",
           "title": "מבחן: חזרה על בסיס",
-          "questions": "[]"
+          "questions": []
         },
         "lessons": []
       },
@@ -104,7 +104,7 @@
           "id": "qz7",
           "chapter_id": "bg2",
           "title": "מבחן: אסטרטגיה",
-          "questions": "[]"
+          "questions": []
         },
         "lessons": []
       }
@@ -127,7 +127,7 @@
           "id": "qz8",
           "chapter_id": "mr1",
           "title": "מבחן: נגזרות",
-          "questions": "[]"
+          "questions": []
         },
         "lessons": []
       }
