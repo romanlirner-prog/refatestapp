@@ -1657,26 +1657,6 @@ function renderProgressMap() {
 // ══════════════════════════════════════
 //  ADMIN
 // ══════════════════════════════════════
-async function doAdminLogin() {
-  const phone = document.getElementById('admin-phone').value.trim();
-  const pass  = document.getElementById('admin-pass').value.trim();
-  const errEl = document.getElementById('admin-error');
-  const sp    = document.getElementById('admin-spinner');
-  errEl.style.display='none'; sp.style.display='block';
-  try {
-    const r = await fetch(`${API}/api/admin/login`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ phone, password: pass }),
-    });
-    sp.style.display='none';
-    if (!r.ok) { errEl.style.display='block'; return; }
-    document.getElementById('admin-login-panel').classList.add('hidden');
-    document.getElementById('admin-dashboard').classList.remove('hidden');
-    loadAdminData();
-  } catch {
-    sp.style.display='none'; errEl.textContent='שגיאת שרת'; errEl.style.display='block';
-  }
-}
 
 async function pushCurriculum(btn) {
   const orig = btn.textContent;
