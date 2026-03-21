@@ -2031,7 +2031,7 @@ function openEditSheet(type, id) {
   else if (type === 'edit-quiz') {
     let ch = null; let courseId = null;
     for (const c of curriculum) { ch = c.chapters.find(ch=>ch.id===id); if(ch){courseId=c.id;break;} }
-    const questions = JSON.parse(ch?.quiz?.questions||'[]');
+    const questions = parseQuestions(ch?.quiz?.questions);
     title.textContent = `📝 ${ch?.quiz?.title||'מבחן מסכם'}`;
     let qHtml = questions.map((q,qi) => buildQuizQEditor(q, qi)).join('');
     body.innerHTML = `

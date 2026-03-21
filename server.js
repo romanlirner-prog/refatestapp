@@ -15,7 +15,7 @@ app.use(express.json());
 
 const staticDir = process.env.VERCEL ? path.join(process.cwd()) : path.join(__dirname);
 app.use(express.static(staticDir));
-const APP_VERSION = '20260316-6';
+const APP_VERSION = `v-${Date.now()}`;
 app.get('/', (req, res) => {
   if (req.query.v !== APP_VERSION) {
     return res.redirect(302, `/?v=${APP_VERSION}`);
@@ -374,7 +374,7 @@ app.post('/api/quiz-result', (req, res) => {
 });
 
 // ─── ADMIN AUTH ────────────────────────────────────────────────────────
-const ADMIN_PASSWORD = 'refaroman2003';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'refaroman2003';
 
 app.post('/api/admin/login', (req, res) => {
   const { phone='', password='' } = req.body;
@@ -570,11 +570,11 @@ if (process.env.NODE_ENV !== 'production') {
   ins.run('student@edu.com', null,   'סולו',  'dev_3');
 }
 
-;(() => {
-  const ins = db.prepare('INSERT OR IGNORE INTO purchases (email,phone,plan,grow_transaction_id) VALUES (?,?,?,?)');
-  ins.run(null,          '123',      'סולו',  'permanent_123');
-  ins.run('t@test.com',  null,       'סולו',  'permanent_ttest');
-})();
+if (process.env.NODE_ENV !== 'production') {
+  const insPerm = db.prepare('INSERT OR IGNORE INTO purchases (email,phone,plan,grow_transaction_id) VALUES (?,?,?,?)');
+  insPerm.run(null,          '123',      'סולו',  'permanent_123');
+  insPerm.run('t@test.com',  null,       'סולו',  'permanent_ttest');
+}
 
 // ─── START ────────────────────────────────────────────────────────────
 if (!process.env.VERCEL) {
